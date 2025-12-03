@@ -5,6 +5,7 @@ import Redis from "ioredis";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import RedisStore from "rate-limit-redis";
+import proxy from "express-http-proxy";
 
 //#region Constants
 const app = express();
@@ -22,6 +23,17 @@ const expressEndpointRateLimiter = rateLimit({
     sendCommand: (...args) => redisClient.call(...args),
   }),
 });
+const proxyOptions = {
+  proxyReqPathResolver: (req) => {
+    return req.originalUrl.replace(/^\/v1/, "/api");
+  },
+  proxyErrorHandler: (err, res, next) => {
+    logger.error(`Proxy Error: ${err.message}`);
+    return sendError(res, err.message, 500, {
+      message: "Internal Server Error",
+    });
+  },
+};
 //#endregion
 
 //#region Middleware
@@ -32,7 +44,28 @@ app.use(express.json());
 app.use(expressEndpointRateLimiter);
 //#endregion
 
+//#region Proxy
+app.use(
+  "/v1/auth",
+  proxy(process.env.USER_SERVICE_URL, {
+    ...proxyOptions,
+    // NOTE: Allows us to overwrite certain Request Options before proxying
+    proxyReqOptDecorator: (proxyReqOptions, srcReq) => {
+      proxyReqOptions.headers["content-type"] = "application/json";
+      return proxyReqOptions;
+    },
+    userResDecorator: (proxyRes, proxyResData, userReq, userRes) => {
+      logger.info(
+        `Response Received from User Service: ${proxyRes.statusCode}`,
+      );
+      return proxyResData;
+    },
+  }),
+);
+//#endregion
+
 //#region Global Error Handler
 app.use(errorHandler);
 //#endregion
+
 export { app };
