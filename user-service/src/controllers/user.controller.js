@@ -6,6 +6,7 @@ import {
 } from "devdad-express-utils";
 import { generateTokens } from "../utils/generateToken.utils.js";
 import { User } from "../models/User.model.js";
+import { validateRegistration } from "../utils/validation.utils.js";
 
 //#region Register User
 export const registerUser = catchAsync(async (req, res, next) => {

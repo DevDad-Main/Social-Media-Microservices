@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import { RefreshToken } from "../models/RefreshToken.model.js";
 import { isValidObjectId } from "mongoose";
 import { AppError } from "devdad-express-utils";
+import crypto from "crypto";
 
 //#region Generate Token
 export const generateTokens = async (user) => {
@@ -20,7 +21,7 @@ export const generateTokens = async (user) => {
     );
 
     const refreshToken = crypto.randomBytes(40).toString("hex");
-    const expiresAt = new Data();
+    const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
     await RefreshToken.create({
