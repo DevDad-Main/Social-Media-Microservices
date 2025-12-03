@@ -1,11 +1,15 @@
+import "dotenv/config";
 import { connectDB, getDBStatus, logger } from "devdad-express-utils";
 import { app } from "./app.js";
 
 await connectDB();
 
-const dbStatus = getDBStatus();
-
 app.listen(process.env.PORT, () => {
-  console.log(`Server is running on port ${process.env.PORT}`);
-  logger.info("DB Status", dbStatus);
+  logger.info(`Server is running on port ${process.env.PORT}`);
+  logger.info("DB Status", getDBStatus());
+});
+
+process.on("unhandledRejection", (reason, p) => {
+  logger.error("Unhandled Rejection at: Promise", p, "reason:", reason);
+  process.exit(1);
 });

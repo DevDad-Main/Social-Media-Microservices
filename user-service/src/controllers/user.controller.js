@@ -4,8 +4,8 @@ import {
   sendError,
   sendSuccess,
 } from "devdad-express-utils";
-import { generateTokens } from "../utils/generateToken.utils";
-import { User } from "../models/User.model";
+import { generateTokens } from "../utils/generateToken.utils.js";
+import { User } from "../models/User.model.js";
 
 //#region Register User
 export const registerUser = catchAsync(async (req, res, next) => {
