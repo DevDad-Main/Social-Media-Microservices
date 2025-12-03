@@ -4,8 +4,8 @@ import { app } from "./app.js";
 
 await connectDB();
 
-app.listen(process.env.PORT, () => {
-  logger.info(`Server is running on port ${process.env.PORT}`);
+app.listen(process.env.PORT || 3001, () => {
+  logger.info(`Server is running on port ${process.env.PORT || 3001}`);
   logger.info("DB Status", getDBStatus());
 });
 
