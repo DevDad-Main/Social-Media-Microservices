@@ -102,5 +102,53 @@ export const generateRefreshToken = catchAsync(async (req, res, next) => {
     logger.warn("Refresh Token Expired");
     return sendError(res, "Refresh Token Expired", 401);
   }
+
+  const user = await User.findById(storedRefreshToken.user);
+
+  if (!user) {
+    logger.warn("User Not Found");
+    return sendError(res, "User Not Found", 404);
+  }
+
+  const { accesstoken: newAccessToken, refreshToken: newRefreshToken } =
+    await generateTokens(user);
+
+  const tokenToDelete = await RefreshToken.deleteOne({
+    _id: storedRefreshToken._id,
+  });
+
+  if (!tokenToDelete) {
+    logger.warn("Refresh Token Failed To Delete");
+    return sendError(res, "Refresh Token Failed To Delete", 404);
+  }
+
+  return sendSuccess(
+    res,
+    { accesstoken: newAccessToken, refreshToken: newRefreshToken },
+    "Refresh Token Generated Successfully",
+    201,
+  );
+});
+//#endregion
+
+//#region Logout User
+export const logoutUser = catchAsync(async (req, res, next) => {
+  const { refreshToken } = req.body;
+
+  if (!refreshToken) {
+    logger.warn("Refresh Token Not Found");
+    return sendError(res, "Refresh Token Not Found", 400);
+  }
+
+  const tokenToDelete = await RefreshToken.deleteOne({
+    token: refreshToken,
+  });
+
+  if (!tokenToDelete) {
+    logger.warn("Refresh Token Failed To Delete");
+    return sendError(res, "Refresh Token Failed To Delete", 404);
+  }
+
+  return sendSuccess(res, "Logout Successful", 200);
 });
 //#endregion
