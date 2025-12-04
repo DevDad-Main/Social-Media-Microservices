@@ -51,8 +51,8 @@ app.use((req, res, next) => {
 //#endregion
 
 //#region Route Entry Points
-app.use("/api/v1/auth/register", expressEndpointRateLimiter);
-app.use("/api/v1/auth", userRouter);
+app.use("/api/auth/register", expressEndpointRateLimiter);
+app.use("/api/auth", userRouter);
 //#endregion
 
 //#region Global Error Handler

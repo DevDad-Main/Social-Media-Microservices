@@ -1,12 +1,16 @@
+import { generateTokens } from "../utils/generateToken.utils.js";
+import { User } from "../models/User.model.js";
+import {
+  validateRegistration,
+  validateLogin,
+} from "../utils/validation.utils.js";
 import {
   catchAsync,
   logger,
   sendError,
   sendSuccess,
 } from "devdad-express-utils";
-import { generateTokens } from "../utils/generateToken.utils.js";
-import { User } from "../models/User.model.js";
-import { validateRegistration } from "../utils/validation.utils.js";
+import { RefreshToken } from "../models/RefreshToken.model.js";
 
 //#region Register User
 export const registerUser = catchAsync(async (req, res, next) => {
@@ -40,5 +44,63 @@ export const registerUser = catchAsync(async (req, res, next) => {
     "User Registered Successfully",
     201,
   );
+});
+//#endregion
+
+//#region Login User
+export const loginUser = catchAsync(async (req, res, next) => {
+  const { email, password } = req.body;
+  const { error } = validateLogin(req.body);
+
+  if (error) {
+    logger.warn("Login Validation Error: ", error.details[0].message);
+    return sendError(res, error.details[0].message, 400);
+  }
+
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    logger.warn("User Not Found");
+    return sendError(res, "User Not Found", 404);
+  }
+
+  const isPasswordMatching = await user.comparePassword(password);
+
+  if (!isPasswordMatching) {
+    logger.warn("Invalid Password");
+    return sendError(res, "Invalid Password", 400);
+  }
+
+  const { accesstoken, refreshToken } = await generateTokens(user);
+
+  return sendSuccess(
+    res,
+    { accesstoken, refreshToken, userId: user._id },
+    "Login Successful",
+    200,
+  );
+});
+//#endregion
+
+//#region Generate Refresh Token
+export const generateRefreshToken = catchAsync(async (req, res, next) => {
+  const { refreshToken } = req.body;
+
+  if (!refreshToken) {
+    logger.warn("Refresh Token Not Found");
+    return sendError(res, "Refresh Token Not Found", 400);
+  }
+
+  const storedRefreshToken = await RefreshToken.findOne({ refreshToken });
+
+  if (!storedRefreshToken) {
+    logger.warn("Refresh Token Not Found");
+    return sendError(res, "Refresh Token Not Found", 404);
+  }
+
+  if (storedRefreshToken.expiresAt < new Date()) {
+    logger.warn("Refresh Token Expired");
+    return sendError(res, "Refresh Token Expired", 401);
+  }
 });
 //#endregion
