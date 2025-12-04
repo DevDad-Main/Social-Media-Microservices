@@ -1,4 +1,5 @@
 import { isValidObjectId } from "mongoose";
+import { validateRegistration } from "../utils/validation.utils.js";
 import { Post } from "../models/post.model.js";
 import {
   logger,
@@ -10,6 +11,15 @@ import {
 //#region Create Post
 export const createPost = catchAsync(async (req, res, next) => {
   const { content, postType } = req.body;
+  const { error } = validateRegistration(req.body);
+
+  if (error) {
+    logger.warn(
+      "New Post Creation Validation Error: ",
+      error.details[0].message,
+    );
+    return sendError(res, error.details[0].message, 400);
+  }
 
   if (!isValidObjectId(req.user._id)) {
     logger.warn(`User ${req.user._id} is not valid`);
