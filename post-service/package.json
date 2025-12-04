@@ -21,7 +21,9 @@
     "ioredis": "^5.8.2",
     "joi": "^18.0.2",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^9.0.0"
+    "mongoose": "^9.0.0",
+    "rate-limit-redis": "^4.3.1",
+    "rate-limiter-flexible": "^9.0.0"
   },
   "devDependencies": {
     "mongodb-memory-server": "^10.4.0",

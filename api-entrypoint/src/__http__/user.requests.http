@@ -1,3 +1,4 @@
+### User Service API Endpoints ###
 ### Register Route
 POST http://localhost:3000/v1/auth/register
 content-type: application/json
@@ -35,3 +36,9 @@ content-type: application/json
 {
   "refreshToken": "0cc4bf80964a81ada00259de9c0b51d9bbe2d41690a5d9edefe53d0605c0e6b174f03ccf75006dc5"
 }
+
+
+
+
+
+

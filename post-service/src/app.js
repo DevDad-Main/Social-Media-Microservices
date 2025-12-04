@@ -51,7 +51,7 @@ app.use((req, res, next) => {
 //#endregion
 
 //#region Route Entry Points
-app.use("/api/auth/create-post", expressEndpointRateLimiter);
+app.use("/api/posts/create-post", expressEndpointRateLimiter);
 //NOTE: Passing redisClient to the post router -> Later used for sending data to media-service
 app.use(
   "/api/posts",

@@ -1,0 +1,10 @@
+### Post Service API Endpoints ###
+### Create Post Route
+POST http://localhost:3000/v1/posts/create-post
+content-type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OTMwOGEzYTZjYTg5MWJmZjAxNTZiOWEiLCJ1c2VybmFtZSI6ImRldmRhZCIsImlhdCI6MTc2NDg3NjM5MywiZXhwIjoxNzY0ODc3NTkzfQ.QqJE1cazUGpiZC6V48Koprj303B4zYVAtr5pKseKLFY
+
+{
+ "content": "test content goes here",
+ "postType": "text_with_image"
+}

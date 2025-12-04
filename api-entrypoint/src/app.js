@@ -6,6 +6,7 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import RedisStore from "rate-limit-redis";
 import proxy from "express-http-proxy";
+import { validateUserToken } from "./middleware/auth.middleware.js";
 
 //#region Constants
 const app = express();
@@ -28,10 +29,16 @@ const proxyOptions = {
     return req.originalUrl.replace(/^\/v1/, "/api");
   },
   proxyErrorHandler: (err, res, next) => {
-    logger.error(`Proxy Error: ${err.message}`);
-    return sendError(res, err.message, 500, {
-      message: "Internal Server Error",
-    });
+    logger.error(
+      `Proxy Error: `,
+      err.message || err || "Something Went Wrong With Our Proxies",
+    );
+    return sendError(
+      res,
+      err.message || err || "Something Went Wrong With Our Proxies",
+      500,
+      { err },
+    );
   },
 };
 //#endregion
@@ -57,6 +64,26 @@ app.use(
     userResDecorator: (proxyRes, proxyResData, userReq, userRes) => {
       logger.info(
         `Response Received from User Service: ${proxyRes.statusCode}`,
+      );
+      return proxyResData;
+    },
+  }),
+);
+
+app.use(
+  "/v1/posts",
+  validateUserToken,
+  proxy(process.env.POST_SERVICE_URL, {
+    ...proxyOptions,
+    // NOTE: Allows us to overwrite certain Request Options before proxying
+    proxyReqOptDecorator: (proxyReqOptions, srcReq) => {
+      proxyReqOptions.headers["content-type"] = "application/json";
+      proxyReqOptions.headers["x-user-id"] = srcReq.user._id;
+      return proxyReqOptions;
+    },
+    userResDecorator: (proxyRes, proxyResData, userReq, userRes) => {
+      logger.info(
+        `Response Received from Post Service: ${proxyRes.statusCode}`,
       );
       return proxyResData;
     },

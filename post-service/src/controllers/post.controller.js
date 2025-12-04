@@ -1,6 +1,6 @@
 import { isValidObjectId } from "mongoose";
-import { validateRegistration } from "../utils/validation.utils.js";
-import { Post } from "../models/post.model.js";
+import { validateNewPostCreation } from "../utils/validation.utils.js";
+import { Post } from "../models/Post.model.js";
 import {
   logger,
   sendSuccess,
@@ -11,7 +11,7 @@ import {
 //#region Create Post
 export const createPost = catchAsync(async (req, res, next) => {
   const { content, postType } = req.body;
-  const { error } = validateRegistration(req.body);
+  const { error } = validateNewPostCreation(req.body);
 
   if (error) {
     logger.warn(
