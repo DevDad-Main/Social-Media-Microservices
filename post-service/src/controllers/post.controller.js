@@ -47,8 +47,45 @@ export const createPost = catchAsync(async (req, res, next) => {
 });
 //#endregion
 
-//#region Get Post
-export const getPost = catchAsync(async (req, res, next) => {});
+//#region Get All Posts
+export const getPosts = catchAsync(async (req, res, next) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+
+  const cacheKey = `posts-page-${page}-limit-${limit}`;
+  const cachedPosts = await req.redisClient.get(cacheKey);
+
+  if (cachedPosts) {
+    return sendSuccess(
+      res,
+      JSON.parse(cachedPosts),
+      "Posts retrieved successfully",
+      200,
+    );
+  }
+
+  const posts = await Post.find({})
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .sort({ createdAt: -1 })
+    .populate("user", "username");
+
+  const result = {
+    posts,
+    currentPage: page,
+    totalPages: Math.ceil(posts.length / limit),
+    limit,
+  };
+
+  // NOTE: We cache the result for 5 minutes
+  await req.redisClient.set(cacheKey, JSON.stringify(result), "EX", 300);
+
+  return sendSuccess(res, result, "Posts retrieved successfully", 200);
+});
+//#endregion
+
+//#region Get Post By Id
+export const getPostById = catchAsync(async (req, res, next) => {});
 //#endregion
 
 //#region Update Post
