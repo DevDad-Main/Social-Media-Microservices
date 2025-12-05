@@ -7,6 +7,7 @@ import {
   sendError,
   catchAsync,
 } from "devdad-express-utils";
+import { clearRedisPostCache } from "../utils/cleanRedisCache.utils.js";
 
 //#region Create Post
 export const createPost = catchAsync(async (req, res, next) => {
@@ -43,6 +44,8 @@ export const createPost = catchAsync(async (req, res, next) => {
     return sendError(res, "Failed to create post", 500);
   }
 
+  await clearRedisPostCache(req, newelyCreatedPost._id.toString());
+
   return sendSuccess(res, newelyCreatedPost, "Post created successfully", 201);
 });
 //#endregion
@@ -52,7 +55,7 @@ export const getPosts = catchAsync(async (req, res, next) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
 
-  const cacheKey = `posts-page-${page}-limit-${limit}`;
+  const cacheKey = `posts:${page}-${limit}`;
   const cachedPosts = await req.redisClient.get(cacheKey);
 
   if (cachedPosts) {
@@ -68,6 +71,7 @@ export const getPosts = catchAsync(async (req, res, next) => {
     .skip((page - 1) * limit)
     .limit(limit)
     .sort({ createdAt: -1 });
+  //TODO: Refer to commit https://github.com/DevDad-Main/Social-Media-Microservices/commit/f4ec390dbb5df4b5efa39c523a2205a98b1c8782
   // .populate("user", "username");
 
   const result = {
@@ -85,7 +89,39 @@ export const getPosts = catchAsync(async (req, res, next) => {
 //#endregion
 
 //#region Get Post By Id
-export const getPostById = catchAsync(async (req, res, next) => {});
+export const getPostById = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+
+  if (!isValidObjectId(id)) {
+    logger.warn(`Invalid Post ID: ${id}`);
+    return sendError(res, "Invalid Post ID", 400);
+  }
+
+  const cacheKey = `post:${id}`;
+  const cachedPost = await req.redisClient.get(cacheKey);
+
+  if (cachedPost) {
+    console.log(cachedPost);
+    return sendSuccess(
+      res,
+      JSON.parse(cachedPost),
+      "Posts retrieved successfully",
+      200,
+    );
+  }
+
+  const post = await Post.findById(id);
+
+  if (!post) {
+    logger.warn(`Post with ID ${id} not found`);
+    return sendError(res, "Post not found", 404);
+  }
+
+  // NOTE: We cache the result for 1 hour as a single post is not expected to change often
+  await req.redisClient.set(cacheKey, JSON.stringify(post), "EX", 3600);
+
+  return sendSuccess(res, post, "Post retrieved successfully", 200);
+});
 //#endregion
 
 //#region Update Post

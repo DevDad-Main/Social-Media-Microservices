@@ -1,4 +1,12 @@
-import { describe, it, expect, beforeAll, beforeEach, vi } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  beforeEach,
+  vi,
+  afterAll,
+} from "vitest";
 import request from "supertest";
 import express from "express";
 import { Post } from "../../src/models/Post.model.js";
@@ -146,6 +154,51 @@ describe("Post Controller Integration Tests", () => {
         .expect(200);
 
       expect(response.body.data.posts).toHaveLength(0);
+    });
+  });
+
+  describe("GET /api/posts/get-post/:id", () => {
+    let createdPost;
+
+    beforeEach(async () => {
+      // Create test post
+      createdPost = await Post.create({
+        user: new mongoose.Types.ObjectId(),
+        content: "Post 1",
+        postType: "text",
+      });
+    });
+
+    afterAll(async () => {
+      await Post.deleteMany({}); // Clear DB
+    });
+
+    it("should retrieve post by id successfully", async () => {
+      const response = await request(app)
+        .get(`/api/posts/get-post/${createdPost._id}`)
+        .expect(200);
+
+      expect(response.body.message).toBe("Post retrieved successfully");
+      console.log(response.body);
+      expect(response.body.data._id).toBe(String(createdPost._id));
+    });
+
+    it("should return an error if post id is not valid", async () => {
+      const response = await request(app)
+        .get("/api/posts/get-post/63455354")
+        .expect(400);
+
+      expect(response.body.message).toBe("Invalid Post ID");
+    });
+
+    it("should return an error if no post found", async () => {
+      const id = new mongoose.Types.ObjectId();
+
+      const response = await request(app)
+        .get(`/api/posts/get-post/${id}`)
+        .expect(404);
+
+      expect(response.body.message).toBe("Post not found");
     });
   });
 });
