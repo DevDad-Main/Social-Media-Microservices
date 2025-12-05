@@ -7,6 +7,7 @@ import {
 import { uploadMediaBufferToCloudinary } from "../utils/cloudinary.utils.js";
 import { Media } from "../models/Media.model.js";
 
+//#region Upload Media Controller
 export const uploadMedia = catchAsync(async (req, res, next) => {
   const media = req.file;
 
@@ -53,3 +54,4 @@ export const uploadMedia = catchAsync(async (req, res, next) => {
     201,
   );
 });
+//#endregion
