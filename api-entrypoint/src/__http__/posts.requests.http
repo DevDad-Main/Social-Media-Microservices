@@ -20,3 +20,9 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OTMwO
 GET  http://localhost:3000/v1/posts/get-post/6931e084dceb73ff876d13c1
 content-type: application/json
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OTMwOGEzYTZjYTg5MWJmZjAxNTZiOWEiLCJ1c2VybmFtZSI6ImRldmRhZCIsImlhdCI6MTc2NDkyNzYyOSwiZXhwIjoxNzY1MDE0MDI5fQ.mlwbIu-8xjfcxb2T_AHeuffUC4KBkaskVgcN6Fu-Rso
+
+
+### Get Post By Id Route
+DELETE http://localhost:3000/v1/posts/delete-post/6931e084dceb73ff876d13c1
+content-type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OTMwOGEzYTZjYTg5MWJmZjAxNTZiOWEiLCJ1c2VybmFtZSI6ImRldmRhZCIsImlhdCI6MTc2NDkyNzYyOSwiZXhwIjoxNzY1MDE0MDI5fQ.mlwbIu-8xjfcxb2T_AHeuffUC4KBkaskVgcN6Fu-Rso

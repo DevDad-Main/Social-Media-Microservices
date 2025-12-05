@@ -169,10 +169,6 @@ describe("Post Controller Integration Tests", () => {
       });
     });
 
-    afterAll(async () => {
-      await Post.deleteMany({}); // Clear DB
-    });
-
     it("should retrieve post by id successfully", async () => {
       const response = await request(app)
         .get(`/api/posts/get-post/${createdPost._id}`)
@@ -199,6 +195,44 @@ describe("Post Controller Integration Tests", () => {
         .expect(404);
 
       expect(response.body.message).toBe("Post not found");
+    });
+  });
+
+  describe("DELETE /api/posts/delete-post/:id", () => {
+    let createdPost;
+
+    beforeEach(async () => {
+      // Create test post
+      createdPost = await Post.create({
+        user: new mongoose.Types.ObjectId(),
+        content: "Post 1",
+        postType: "text",
+      });
+    });
+
+    it("should retrieve post by id successfully", async () => {
+      const response = await request(app)
+        .delete(`/api/posts/delete-post/${createdPost._id}`)
+        .expect(200);
+      console.log(response.body);
+    });
+
+    it("should return an error if post id is not valid", async () => {
+      const response = await request(app)
+        .delete("/api/posts/delete-post/63455354")
+        .expect(400);
+
+      expect(response.body.message).toBe("Invalid Post ID");
+    });
+
+    it("should return an error if no post found", async () => {
+      const id = new mongoose.Types.ObjectId();
+
+      const response = await request(app)
+        .delete(`/api/posts/delete-post/${id}`)
+        .expect(404);
+
+      expect(response.body.message).toBe("Post Not Found");
     });
   });
 });

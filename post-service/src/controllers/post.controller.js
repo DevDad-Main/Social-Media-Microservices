@@ -7,7 +7,10 @@ import {
   sendError,
   catchAsync,
 } from "devdad-express-utils";
-import { clearRedisPostCache } from "../utils/cleanRedisCache.utils.js";
+import {
+  clearRedisPostCache,
+  clearRedisPostsCache,
+} from "../utils/cleanRedisCache.utils.js";
 
 //#region Create Post
 export const createPost = catchAsync(async (req, res, next) => {
@@ -44,7 +47,7 @@ export const createPost = catchAsync(async (req, res, next) => {
     return sendError(res, "Failed to create post", 500);
   }
 
-  await clearRedisPostCache(req, newelyCreatedPost._id.toString());
+  await clearRedisPostsCache(req);
 
   return sendSuccess(res, newelyCreatedPost, "Post created successfully", 201);
 });
@@ -101,7 +104,6 @@ export const getPostById = catchAsync(async (req, res, next) => {
   const cachedPost = await req.redisClient.get(cacheKey);
 
   if (cachedPost) {
-    console.log(cachedPost);
     return sendSuccess(
       res,
       JSON.parse(cachedPost),
@@ -129,5 +131,34 @@ export const updatePost = catchAsync(async (req, res, next) => {});
 //#endregion
 
 //#region Delete Post
-export const deletePost = catchAsync(async (req, res, next) => {});
+export const deletePostById = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+
+  if (!isValidObjectId(id)) {
+    logger.warn(`Invalid Post ID: ${id}`);
+    return sendError(res, "Invalid Post ID", 400);
+  }
+
+  const postToDelete = await Post.findOneAndDelete({
+    _id: id,
+    user: req.user._id,
+  });
+
+  if (!postToDelete) {
+    logger.warn(`Post Not Found: ${id}`);
+    return sendError(res, "Post Not Found", 404);
+  }
+
+  try {
+    await Promise.all([
+      clearRedisPostCache(req, postToDelete._id.toString()),
+      clearRedisPostsCache(req),
+    ]);
+  } catch (error) {
+    logger.error(error?.message || error || "Failed to clear cache");
+    return sendError(res, error?.message || "Failed to clear cache", 500);
+  }
+
+  return sendSuccess(res, {}, "Post deleted successfully", 200);
+});
 //#endregion
