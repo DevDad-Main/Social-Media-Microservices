@@ -67,8 +67,8 @@ export const getPosts = catchAsync(async (req, res, next) => {
   const posts = await Post.find({})
     .skip((page - 1) * limit)
     .limit(limit)
-    .sort({ createdAt: -1 })
-    .populate("user", "username");
+    .sort({ createdAt: -1 });
+  // .populate("user", "username");
 
   const result = {
     posts,

@@ -4,7 +4,7 @@ import { createPost, getPosts } from "../controllers/post.controller.js";
 
 const postRouter = Router();
 
-// postRouter.use(authenticateUserMiddleware);
+postRouter.use(authenticateUserMiddleware);
 
 postRouter.post("/create-post", createPost);
 postRouter.get("/get-posts", getPosts);
