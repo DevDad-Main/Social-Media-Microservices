@@ -23,9 +23,6 @@ export const uploadMediaBufferToCloudinary = async (
     if (!buffer) {
       return reject(new AppError("Missing buffer data"));
     }
-    if (!folderId) {
-      return reject(new AppError("Missing folderId"));
-    }
 
     const stream = cloudinary.uploader.upload_stream(
       {

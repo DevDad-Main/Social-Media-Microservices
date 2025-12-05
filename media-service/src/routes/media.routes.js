@@ -7,11 +7,6 @@ const mediaRouter = Router();
 
 mediaRouter.use(authenticateUserMiddleware);
 
-mediaRouter.post(
-  "/upload-media",
-  authenticateUserMiddleware,
-  upload.single("file"),
-  uploadMedia,
-);
+mediaRouter.post("/upload-media", upload.single("file"), uploadMedia);
 
 export default mediaRouter;

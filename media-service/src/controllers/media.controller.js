@@ -4,7 +4,7 @@ import {
   sendError,
   sendSuccess,
 } from "devdad-express-utils";
-import { uploadMediaBufferToCloudinary } from "../utils/cloudinary.utils";
+import { uploadMediaBufferToCloudinary } from "../utils/cloudinary.utils.js";
 import { Media } from "../models/Media.model.js";
 
 export const uploadMedia = catchAsync(async (req, res, next) => {
@@ -15,8 +15,8 @@ export const uploadMedia = catchAsync(async (req, res, next) => {
     return sendError(res, "No media file found", 400);
   }
 
-  const { originalName, mimeType, buffer } = media;
-  logger.info(`File details - ${originalName}, ${mimeType}`);
+  const { originalname, mimetype, buffer } = media;
+  logger.info(`File details - ${originalname}, ${mimetype}`);
 
   let cloudinaryResponse;
   try {
@@ -27,17 +27,13 @@ export const uploadMedia = catchAsync(async (req, res, next) => {
       "Error uploading media to Cloudinary: ",
       error?.message || error || "Failed to upload media",
     );
-    return sendError(
-      res,
-      error?.message || error || "Failed to upload media",
-      500,
-    );
+    return sendError(res, error || "Failed to upload media", 500);
   }
 
   const newMediaCreation = await Media.create({
     publicId: cloudinaryResponse.public_id,
-    originalFilename: originalName,
-    mimeType,
+    originalFilename: originalname,
+    mimeType: mimetype,
     url: cloudinaryResponse.secure_url,
     user: req.user._id,
   });

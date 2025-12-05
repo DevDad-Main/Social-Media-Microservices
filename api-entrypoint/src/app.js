@@ -51,7 +51,8 @@ app.use(express.json());
 app.use(expressEndpointRateLimiter);
 //#endregion
 
-//#region Proxy
+//#region Proxies
+//#region User Service Proxy
 app.use(
   "/v1/auth",
   proxy(process.env.USER_SERVICE_URL, {
@@ -69,7 +70,9 @@ app.use(
     },
   }),
 );
+//#endregion
 
+//#region Posts Service Proxy
 app.use(
   "/v1/posts",
   validateUserToken,
@@ -89,6 +92,32 @@ app.use(
     },
   }),
 );
+//#endregion
+
+//#region Media Service Proxy
+app.use(
+  "/v1/media",
+  validateUserToken,
+  proxy(process.env.MEDIA_SERVICE_URL, {
+    ...proxyOptions,
+    // NOTE: Allows us to overwrite certain Request Options before proxying
+    proxyReqOptDecorator: (proxyReqOptions, srcReq) => {
+      proxyReqOptions.headers["x-user-id"] = srcReq.user._id;
+      if (!srcReq.headers["content-type"].startsWith("multipart/form-data")) {
+        proxyReqOptions.headers["content-type"] = "application/json";
+      }
+      return proxyReqOptions;
+    },
+    userResDecorator: (proxyRes, proxyResData, userReq, userRes) => {
+      logger.info(
+        `Response Received from Media Service: ${proxyRes.statusCode}`,
+      );
+      return proxyResData;
+    },
+    parseReqBody: false,
+  }),
+);
+//#endregion
 //#endregion
 
 //#region Global Error Handler
