@@ -13,6 +13,7 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "amqplib": "^0.10.9",
     "cors": "^2.8.5",
     "devdad-express-utils": "^1.4.0",
     "dotenv": "^17.2.3",
