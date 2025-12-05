@@ -4,7 +4,7 @@ const postSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     content: { type: String },
-    imageUrls: [{ type: String }],
+    mediaIds: [{ type: String }],
     postType: {
       type: String,
       enum: ["text", "image", "text_with_image"],

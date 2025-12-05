@@ -11,10 +11,11 @@ import {
   clearRedisPostCache,
   clearRedisPostsCache,
 } from "../utils/cleanRedisCache.utils.js";
+import { publishEvent } from "../utils/rabbitmq.utils.js";
 
 //#region Create Post
 export const createPost = catchAsync(async (req, res, next) => {
-  const { content, postType } = req.body;
+  const { content, postType, mediaIds } = req.body;
   const { error } = validateNewPostCreation(req.body);
 
   if (error) {
@@ -33,12 +34,12 @@ export const createPost = catchAsync(async (req, res, next) => {
   //HACK: This is a temporary solution to get our controller working.
   //TODO: Later we will implement our redis/ RabbitMQ or BullMQ to handle media uplaods
   // const images = req.files;
-  let imageUrls = ["image1", "image2", "image3"];
+  // let imageUrls = ["image1", "image2", "image3"];
 
   const newelyCreatedPost = await Post.create({
     user: req.user._id,
     content,
-    imageUrls,
+    mediaIds,
     postType,
   });
 
@@ -148,6 +149,12 @@ export const deletePostById = catchAsync(async (req, res, next) => {
     logger.warn(`Post Not Found: ${id}`);
     return sendError(res, "Post Not Found", 404);
   }
+
+  await publishEvent("post.deleted", {
+    postId: postToDelete._id.toString(),
+    userId: req.user._id.toString(),
+    mediaIds: postToDelete.mediaIds,
+  });
 
   try {
     await Promise.all([

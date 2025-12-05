@@ -37,13 +37,7 @@ export const registerUser = catchAsync(async (req, res, next) => {
 
   await user.save(); // NOTE: Trigger pre-save hook
 
-  const { accesstoken, refreshToken } = await generateTokens(user);
-  return sendSuccess(
-    res,
-    { accesstoken, refreshToken },
-    "User Registered Successfully",
-    201,
-  );
+  return sendSuccess(res, {}, "User Registered Successfully", 201);
 });
 //#endregion
 
@@ -91,7 +85,9 @@ export const generateRefreshToken = catchAsync(async (req, res, next) => {
     return sendError(res, "Refresh Token Not Found", 400);
   }
 
-   const storedRefreshToken = await RefreshToken.findOne({ token: refreshToken });
+  const storedRefreshToken = await RefreshToken.findOne({
+    token: refreshToken,
+  });
 
   if (!storedRefreshToken) {
     logger.warn("Refresh Token Not Found");
@@ -113,14 +109,14 @@ export const generateRefreshToken = catchAsync(async (req, res, next) => {
   const { accesstoken: newAccessToken, refreshToken: newRefreshToken } =
     await generateTokens(user);
 
-   const tokenToDelete = await RefreshToken.deleteOne({
-     _id: storedRefreshToken._id,
-   });
+  const tokenToDelete = await RefreshToken.deleteOne({
+    _id: storedRefreshToken._id,
+  });
 
-   if (tokenToDelete.deletedCount === 0) {
-     logger.warn("Refresh Token Failed To Delete");
-     return sendError(res, "Refresh Token Failed To Delete", 404);
-   }
+  if (tokenToDelete.deletedCount === 0) {
+    logger.warn("Refresh Token Failed To Delete");
+    return sendError(res, "Refresh Token Failed To Delete", 404);
+  }
 
   return sendSuccess(
     res,
@@ -140,15 +136,15 @@ export const logoutUser = catchAsync(async (req, res, next) => {
     return sendError(res, "Refresh Token Not Found", 400);
   }
 
-   const tokenToDelete = await RefreshToken.deleteOne({
-     token: refreshToken,
-   });
+  const tokenToDelete = await RefreshToken.deleteOne({
+    token: refreshToken,
+  });
 
-   if (tokenToDelete.deletedCount === 0) {
-     logger.warn("Refresh Token Failed To Delete");
-     return sendError(res, "Refresh Token Failed To Delete", 404);
-   }
+  if (tokenToDelete.deletedCount === 0) {
+    logger.warn("Refresh Token Failed To Delete");
+    return sendError(res, "Refresh Token Failed To Delete", 404);
+  }
 
-   return sendSuccess(res, {}, "Logout Successful", 200);
+  return sendSuccess(res, {}, "Logout Successful", 200);
 });
 //#endregion

@@ -2,11 +2,12 @@
 ### Create Post Route
 POST http://localhost:3000/v1/posts/create-post
 content-type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OTMwOGEzYTZjYTg5MWJmZjAxNTZiOWEiLCJ1c2VybmFtZSI6ImRldmRhZCIsImlhdCI6MTc2NDg3NjM5MywiZXhwIjoxNzY0ODc3NTkzfQ.QqJE1cazUGpiZC6V48Koprj303B4zYVAtr5pKseKLFY
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OTMzMTUxZjZlNGY2OGMxNDE5ZTg2ZjUiLCJ1c2VybmFtZSI6InRlc3QxIiwiaWF0IjoxNzY0OTU1NDg0LCJleHAiOjE3NjUwNDE4ODR9.qvTN9BCA9oVmSxEzJb3TEtsZxWFaAlXLh_b2835P79s
 
 {
  "content": "test content goes here",
- "postType": "text_with_image"
+ "postType": "text_with_image",
+ "mediaIds": ["693315c9ae2b3d8a18d8a91f"]
 }
 
 
@@ -22,7 +23,7 @@ content-type: application/json
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OTMwOGEzYTZjYTg5MWJmZjAxNTZiOWEiLCJ1c2VybmFtZSI6ImRldmRhZCIsImlhdCI6MTc2NDkyNzYyOSwiZXhwIjoxNzY1MDE0MDI5fQ.mlwbIu-8xjfcxb2T_AHeuffUC4KBkaskVgcN6Fu-Rso
 
 
-### Get Post By Id Route
-DELETE http://localhost:3000/v1/posts/delete-post/6931e084dceb73ff876d13c1
+### Delete Post By Id Route
+DELETE http://localhost:3000/v1/posts/delete-post/693326bdb1158156933d98fd
 content-type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OTMwOGEzYTZjYTg5MWJmZjAxNTZiOWEiLCJ1c2VybmFtZSI6ImRldmRhZCIsImlhdCI6MTc2NDkyNzYyOSwiZXhwIjoxNzY1MDE0MDI5fQ.mlwbIu-8xjfcxb2T_AHeuffUC4KBkaskVgcN6Fu-Rso
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OTMzMTUxZjZlNGY2OGMxNDE5ZTg2ZjUiLCJ1c2VybmFtZSI6InRlc3QxIiwiaWF0IjoxNzY0OTU1NDg0LCJleHAiOjE3NjUwNDE4ODR9.qvTN9BCA9oVmSxEzJb3TEtsZxWFaAlXLh_b2835P79s

@@ -15,7 +15,7 @@ POST http://localhost:3000/v1/auth/login
 content-type: application/json
 
 {
-  "email": "devdad@test.com",
+  "email": "test1@test.com",
   "password": "1234567"
 }
 
