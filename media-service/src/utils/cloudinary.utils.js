@@ -12,17 +12,14 @@ cloudinary.config({
 /**
  * Uploads the specified file using Buffers and Streams.
  * @param {Int32Array} buffer
- * @param {string} folderId
  * @param {string} resourceType - Defaults to "image" but can be "video"
  * @returns Promise -> If we successfully manage to pipe our stream with our buffered data file to Cloudinary
  */
 export const uploadMediaBufferToCloudinary = async (
   buffer,
-  folderId,
   resourceType = "image",
 ) => {
   return new Promise((resolve, reject) => {
-    //NOTE: Null checks then we reject the promise and makes it easier to handle the unit tests so we can check for these rejects
     if (!buffer) {
       return reject(new AppError("Missing buffer data"));
     }
@@ -32,7 +29,7 @@ export const uploadMediaBufferToCloudinary = async (
 
     const stream = cloudinary.uploader.upload_stream(
       {
-        folder: `SocialMediaMicroservice/${folderId}`,
+        folder: `SocialMediaMicroservice`,
         resource_type: resourceType,
       },
       (error, result) => {
