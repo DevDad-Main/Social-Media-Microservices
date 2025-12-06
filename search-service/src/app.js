@@ -50,7 +50,7 @@ app.use((req, res, next) => {
 //#endregion
 
 //#region Route Entry Points
-app.use("/api/search/", expressEndpointRateLimiter);
+app.use("/api/search/posts", expressEndpointRateLimiter);
 
 app.use("/api/search", (req, res, next) => {
   req.redisClient = redisClient;
