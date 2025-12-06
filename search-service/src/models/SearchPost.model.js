@@ -3,17 +3,21 @@ import mongoose from "mongoose";
 const postSearchSchema = new mongoose.Schema(
   {
     postId: {
-      type: string,
+      type: String,
       required: true,
       unique: true,
     },
     userId: {
-      type: string,
+      type: String,
       required: true,
       unique: true,
     },
     searchTerm: {
-      type: string,
+      type: String,
+      required: true,
+    },
+    postCreatedAt: {
+      type: String,
       required: true,
     },
   },

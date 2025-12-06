@@ -4,7 +4,7 @@ import {
   sendError,
   sendSuccess,
 } from "devdad-express-utils";
-import { PostSearch } from "../models/SearchPost.model";
+import { PostSearch } from "../models/SearchPost.model.js";
 
 export const postSearch = catchAsync(async (req, res, next) => {
   const { query } = req.query;

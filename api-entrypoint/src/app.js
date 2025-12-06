@@ -118,6 +118,31 @@ app.use(
   }),
 );
 //#endregion
+
+//#region Search Posts Service Proxy
+app.use(
+  "/v1/search",
+  validateUserToken,
+  proxy(process.env.SEARCH_SERVICE_URL, {
+    ...proxyOptions,
+    // NOTE: Allows us to overwrite certain Request Options before proxying
+    proxyReqOptDecorator: (proxyReqOptions, srcReq) => {
+      proxyReqOptions.headers["x-user-id"] = srcReq.user._id;
+      if (!srcReq.headers["content-type"].startsWith("multipart/form-data")) {
+        proxyReqOptions.headers["content-type"] = "application/json";
+      }
+      return proxyReqOptions;
+    },
+    userResDecorator: (proxyRes, proxyResData, userReq, userRes) => {
+      logger.info(
+        `Response Received from Search Service: ${proxyRes.statusCode}`,
+      );
+      return proxyResData;
+    },
+    parseReqBody: false,
+  }),
+);
+//#endregion
 //#endregion
 
 //#region Global Error Handler

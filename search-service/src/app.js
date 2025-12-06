@@ -6,6 +6,7 @@ import rateLimit from "express-rate-limit";
 import Redis from "ioredis";
 import RedisStore from "rate-limit-redis";
 import cors from "cors";
+import postSearchRouter from "./routes/postSearch.routes.js";
 
 //#region Constants
 const app = express();
@@ -52,10 +53,14 @@ app.use((req, res, next) => {
 //#region Route Entry Points
 app.use("/api/search/posts", expressEndpointRateLimiter);
 
-app.use("/api/search", (req, res, next) => {
-  req.redisClient = redisClient;
-  next();
-});
+app.use(
+  "/api/search",
+  (req, res, next) => {
+    req.redisClient = redisClient;
+    next();
+  },
+  postSearchRouter,
+);
 //#endregion
 
 //#region Global Error Handler

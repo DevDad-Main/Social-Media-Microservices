@@ -1,8 +1,11 @@
 import "dotenv/config";
 import { connectDB, getDBStatus, logger } from "devdad-express-utils";
 import { app } from "./app.js";
-import { consumeEvent, initializeRabbitMQ } from "./utils/rabbitmq.utils.js";
-import { handleDeletedPostEvent } from "./eventHandlers/media.eventHandler.js";
+import {
+  consumeEvent as consumeRabbitMQEvent,
+  initializeRabbitMQ,
+} from "./utils/rabbitmq.utils.js";
+import { handlePostCreated } from "./eventHandlers/search.eventHandler.js";
 
 await connectDB();
 
@@ -10,11 +13,11 @@ await connectDB();
   try {
     await initializeRabbitMQ();
 
-    await consumeEvent("post.deleted", handleDeletedPostEvent);
+    await consumeRabbitMQEvent("post.created", handlePostCreated);
 
-    app.listen(process.env.PORT || 3003, () => {
+    app.listen(process.env.PORT || 3004, () => {
       logger.info(
-        `Search Service is running on port ${process.env.PORT || 3003}`,
+        `Search Service is running on port ${process.env.PORT || 3004}`,
       );
       logger.info("Search Service DB Status ->", getDBStatus());
     });

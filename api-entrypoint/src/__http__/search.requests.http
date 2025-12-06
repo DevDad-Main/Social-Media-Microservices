@@ -1,0 +1,10 @@
+
+### Search Service API Endpoints ###
+### Get Post Search Via Query 
+GET http://localhost:3000/v1/search/posts?query=test
+content-type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OTMzMTUxZjZlNGY2OGMxNDE5ZTg2ZjUiLCJ1c2VybmFtZSI6InRlc3QxIiwiaWF0IjoxNzY1MDQ2MzU3LCJleHAiOjE3NjUxMzI3NTd9.F54js48LxSHw7v6_k3YvresjxvaLyKd9oBuMs7Z0r60
+
+
+
+

@@ -11,7 +11,7 @@ import {
   clearRedisPostCache,
   clearRedisPostsCache,
 } from "../utils/cleanRedisCache.utils.js";
-import { publishEvent } from "../utils/rabbitmq.utils.js";
+import { publishEvent as publishRabbitMQEvent } from "../utils/rabbitmq.utils.js";
 
 //#region Create Post
 export const createPost = catchAsync(async (req, res, next) => {
@@ -48,6 +48,12 @@ export const createPost = catchAsync(async (req, res, next) => {
     return sendError(res, "Failed to create post", 500);
   }
 
+  await publishRabbitMQEvent("post.created", {
+    postId: newelyCreatedPost._id.toString(),
+    userId: req.user._id.toString(),
+    searchTerm: newelyCreatedPost.content,
+    postCreatedAt: newelyCreatedPost.createdAt,
+  });
   await clearRedisPostsCache(req);
 
   return sendSuccess(res, newelyCreatedPost, "Post created successfully", 201);
@@ -150,7 +156,7 @@ export const deletePostById = catchAsync(async (req, res, next) => {
     return sendError(res, "Post Not Found", 404);
   }
 
-  await publishEvent("post.deleted", {
+  await publishRabbitMQEvent("post.deleted", {
     postId: postToDelete._id.toString(),
     userId: req.user._id.toString(),
     mediaIds: postToDelete.mediaIds,
