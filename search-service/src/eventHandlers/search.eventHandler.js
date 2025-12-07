@@ -29,3 +29,5 @@ export async function handlePostCreated(event) {
     logger.error("Error handling post creation event", error);
   }
 }
+
+export async function handlePostDeleted(event) {}

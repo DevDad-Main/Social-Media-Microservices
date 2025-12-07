@@ -5,7 +5,10 @@ import {
   consumeEvent as consumeRabbitMQEvent,
   initializeRabbitMQ,
 } from "./utils/rabbitmq.utils.js";
-import { handlePostCreated } from "./eventHandlers/search.eventHandler.js";
+import {
+  handlePostCreated,
+  handlePostDeleted,
+} from "./eventHandlers/search.eventHandler.js";
 
 await connectDB();
 
@@ -14,6 +17,7 @@ await connectDB();
     await initializeRabbitMQ();
 
     await consumeRabbitMQEvent("post.created", handlePostCreated);
+    await consumeRabbitMQEvent("post.deleted", handlePostDeleted);
 
     app.listen(process.env.PORT || 3004, () => {
       logger.info(

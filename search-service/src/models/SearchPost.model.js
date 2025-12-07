@@ -10,7 +10,7 @@ const postSearchSchema = new mongoose.Schema(
     userId: {
       type: String,
       required: true,
-      unique: true,
+      index: true,
     },
     searchTerm: {
       type: String,
@@ -25,5 +25,6 @@ const postSearchSchema = new mongoose.Schema(
 );
 
 postSearchSchema.index({ searchTerm: "text" });
+postSearchSchema.index({ postCreatedAt: -1 });
 
 export const PostSearch = mongoose.model("PostSearch", postSearchSchema);
