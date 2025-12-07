@@ -161,6 +161,8 @@ export const logoutUser = catchAsync(async (req, res, next) => {
     return sendError(res, "Refresh Token Failed To Delete", 404);
   }
 
-  return sendSuccess(res, {}, "Logout Successful", 200);
+  return sendSuccess(res, {}, "Logout Successful", 200)
+    .clearCookie("accessToken", HTTP_OPTIONS)
+    .clearCookie("refreshToken", HTTP_OPTIONS);
 });
 //#endregion
