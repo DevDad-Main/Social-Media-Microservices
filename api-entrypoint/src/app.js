@@ -41,6 +41,8 @@ const proxyOptions = {
     );
   },
 };
+
+app.set("trust proxy", true);
 //#endregion
 
 //#region Middleware
