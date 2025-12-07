@@ -42,7 +42,7 @@ const proxyOptions = {
   },
 };
 
-app.set("trust proxy", true);
+app.set("trust proxy", 1);
 //#endregion
 
 //#region Middleware
