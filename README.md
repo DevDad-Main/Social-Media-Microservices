@@ -8,9 +8,9 @@ The application consists of the following microservices:
 
 - **API Gateway (api-entrypoint)**: Acts as the single entry point for all client requests, handles authentication, rate limiting, and routes requests to appropriate services.
 - **User Service**: Manages user registration, authentication, login, logout, and token refresh.
-- **Post Service**: Handles post creation, retrieval, and management.
-- **Media Service**: Manages media uploads and storage using Cloudinary.
-- **Search Service**: Placeholder for future search functionality.
+- **Post Service**: Handles post creation, retrieval, deletion, and management with event-driven updates.
+- **Media Service**: Manages media uploads and storage using Cloudinary, with automatic cleanup on post deletion.
+- **Search Service**: Provides full-text search functionality for posts using MongoDB text indexes and Redis caching.
 
 ## Tech Stack
 
@@ -18,34 +18,58 @@ The application consists of the following microservices:
 - **Framework**: Express.js
 - **Database**: MongoDB with Mongoose ODM
 - **Caching**: Redis
-- **Message Queue**: RabbitMQ with AMQP
+- **Message Queue**: RabbitMQ with AMQP (topic exchange)
 - **Authentication**: JWT with refresh tokens
 - **Media Storage**: Cloudinary
 - **Validation**: Joi
 - **Rate Limiting**: express-rate-limit with Redis store
 - **Logging**: Winston
-- **Testing**: Vitest with Supertest
+- **Testing**: Vitest with Supertest and MongoDB Memory Server
 - **Development**: Nodemon
+- **Containerization**: Docker & Docker Compose
 
 ## Prerequisites
 
 - Node.js (v18 or higher)
-- MongoDB
-- Redis
-- RabbitMQ
+- Docker & Docker Compose (for containerized deployment)
 - Cloudinary account (for media uploads)
 
 ## Installation
 
-1. Clone the repository:
+### Option 1: Docker Compose (Recommended)
 
+1. Clone the repository:
    ```bash
    git clone https://github.com/DevDad-Main/Social-Media-Microservices
    cd Social-Media-Microservices
    ```
 
-2. Install dependencies for each service:
+2. Create environment files for each service (see Environment Variables section)
 
+3. Start all services:
+   ```bash
+   docker-compose up --build
+   ```
+
+4. The API will be available at `http://localhost:3000`
+
+### Option 2: Local Development
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/DevDad-Main/Social-Media-Microservices
+   cd Social-Media-Microservices
+   ```
+
+2. Start external services:
+   ```bash
+   # Using Docker for external dependencies
+   docker run -d --name redis -p 6379:6379 redis:alpine
+   docker run -d --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3.10-management-alpine
+   docker run -d --name mongodb -p 27017:27017 mongo:latest
+   ```
+
+3. Install dependencies for each service:
    ```bash
    # API Gateway
    cd api-entrypoint && npm install && cd ..
@@ -59,62 +83,13 @@ The application consists of the following microservices:
    # Media Service
    cd media-service && npm install && cd ..
 
-   # Search Service (optional)
+   # Search Service
    cd search-service && npm install && cd ..
    ```
 
-## Environment Variables
+4. Create `.env` files in each service directory (see Environment Variables section)
 
-Create `.env` files in each service directory with the following variables:
-
-### API Gateway (.env)
-
-```
-PORT=3000
-REDIS_URL=redis://localhost:6379
-USER_SERVICE_URL=http://localhost:3001
-POST_SERVICE_URL=http://localhost:3002
-MEDIA_SERVICE_URL=http://localhost:3003
-```
-
-### User Service (.env)
-
-```
-PORT=3001
-MONGO_URI=mongodb://localhost:27017/social_media_users
-REDIS_URL=redis://localhost:6379
-JWT_SECRET=your_jwt_secret_here
-```
-
-### Post Service (.env)
-
-```
-PORT=3002
-MONGO_URI=mongodb://localhost:27017/social_media_posts
-REDIS_URL=redis://localhost:6379
-RABBITMQ_URL=amqp://localhost:5672
-JWT_SECRET=your_jwt_secret_here
-```
-
-### Media Service (.env)
-
-```
-PORT=3003
-MONGO_URI=mongodb://localhost:27017/social_media_media
-REDIS_URL=redis://localhost:6379
-RABBITMQ_URL=amqp://localhost:5672
-JWT_SECRET=your_jwt_secret_here
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_api_key
-CLOUDINARY_API_SECRET=your_api_secret
-```
-
-## Running the Application
-
-1. Start external services (MongoDB, Redis, RabbitMQ)
-
-2. Start each microservice in separate terminals:
-
+5. Start each microservice in separate terminals:
    ```bash
    # Terminal 1: API Gateway
    cd api-entrypoint && npm run dev
@@ -127,9 +102,76 @@ CLOUDINARY_API_SECRET=your_api_secret
 
    # Terminal 4: Media Service
    cd media-service && npm run dev
+
+   # Terminal 5: Search Service
+   cd search-service && npm run dev
    ```
 
-3. The API will be available at `http://localhost:3000`
+## Environment Variables
+
+Create `.env` files in each service directory with the following variables:
+
+### API Gateway (.env)
+```
+PORT=3000
+REDIS_URL=redis://redis:6379
+USER_SERVICE_URL=http://user-service:3001
+POST_SERVICE_URL=http://post-service:3002
+MEDIA_SERVICE_URL=http://media-service:3003
+SEARCH_SERVICE_URL=http://search-service:3004
+```
+
+### User Service (.env)
+```
+PORT=3001
+MONGO_URI=mongodb://mongodb:27017/social_media_users
+REDIS_URL=redis://redis:6379
+JWT_SECRET=your_jwt_secret_here
+```
+
+### Post Service (.env)
+```
+PORT=3002
+MONGO_URI=mongodb://mongodb:27017/social_media_posts
+REDIS_URL=redis://redis:6379
+RABBITMQ_URL=amqp://rabbitmq:5672
+JWT_SECRET=your_jwt_secret_here
+```
+
+### Media Service (.env)
+```
+PORT=3003
+MONGO_URI=mongodb://mongodb:27017/social_media_media
+REDIS_URL=redis://redis:6379
+RABBITMQ_URL=amqp://rabbitmq:5672
+JWT_SECRET=your_jwt_secret_here
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+```
+
+### Search Service (.env)
+```
+PORT=3004
+MONGO_URI=mongodb://mongodb:27017/social_media_search
+REDIS_URL=redis://redis:6379
+RABBITMQ_URL=amqp://rabbitmq:5672
+JWT_SECRET=your_jwt_secret_here
+```
+
+## Event-Driven Architecture
+
+The application uses RabbitMQ for inter-service communication:
+
+- **post.created**: Published when a post is created, consumed by Search Service to index the post
+- **post.deleted**: Published when a post is deleted, consumed by Search Service (removes index) and Media Service (deletes associated media files)
+
+## Caching Strategy
+
+- **Posts**: Cached for 5 minutes with pagination support
+- **Individual Posts**: Cached for 1 hour
+- **Search Results**: Cached for 3 minutes
+- **Rate Limiting**: Uses Redis store for distributed rate limiting
 
 ## Testing
 
@@ -142,27 +184,47 @@ cd user-service && npm test
 # Post Service tests
 cd post-service && npm test
 
-# Media Service tests
+# Media Service tests (Note: requires Cloudinary credentials)
 cd media-service && npm test
 ```
+
+Tests use MongoDB Memory Server for isolated database testing.
 
 ## API Endpoints
 
 ### Authentication
-
 - `POST /v1/auth/register` - Register a new user
 - `POST /v1/auth/login` - Login user
-- `POST /v1/auth/refresh` - Refresh access token
+- `POST /v1/auth/refresh-token` - Refresh access token
 - `POST /v1/auth/logout` - Logout user
 
 ### Posts (Protected)
-
 - `POST /v1/posts/create-post` - Create a new post
-- `GET /v1/posts` - Get posts
+- `GET /v1/posts/get-posts` - Get paginated posts
+- `GET /v1/posts/get-post/:id` - Get post by ID
+- `DELETE /v1/posts/delete-post/:id` - Delete post by ID
 
 ### Media (Protected)
+- `POST /v1/media/upload-media` - Upload media file (multipart/form-data)
 
-- `POST /v1/media/upload-media` - Upload media file
+### Search (Protected)
+- `GET /v1/search/posts?query=search_term` - Search posts by content
+
+## Development Tools
+
+- **HTTP Requests**: Use the `.http` files in `api-entrypoint/src/__http__/` for testing endpoints
+- **Docker**: Full containerization with docker-compose.yml
+- **Linting**: ESLint configuration available
+- **Git Hooks**: Pre-commit hooks for code quality
+
+## Security Features
+
+- JWT authentication with refresh tokens
+- Rate limiting (100 requests per 15 minutes per IP)
+- Helmet.js for security headers
+- CORS configuration
+- Input validation with Joi
+- Password hashing with bcrypt (12 rounds)
 
 ## Contributing
 
@@ -170,7 +232,8 @@ cd media-service && npm test
 2. Create a feature branch
 3. Make your changes
 4. Add tests if applicable
-5. Submit a pull request
+5. Run tests and ensure they pass
+6. Submit a pull request
 
 ## License
 
