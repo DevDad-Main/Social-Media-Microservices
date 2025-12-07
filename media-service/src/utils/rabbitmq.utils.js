@@ -6,16 +6,18 @@ const EXCHANGE_NAME = "SocialMediaMicroservice_events";
 let connection = null;
 let channel = null;
 
-async function connectionToRabbitMQ() {
-  try {
-    if (connection) {
-      return;
+async function connectionToRabbitMQ(retries = 5) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      if (connection) return connection;
+      connection = await amqp.connect(process.env.RABBITMQ_URL);
+      return connection;
+    } catch (error) {
+      logger.warn(`RabbitMQ not ready, retrying ${i + 1}/${retries}...`);
+      await new Promise((res) => setTimeout(res, 2000));
     }
-
-    return (connection = await amqp.connect(process.env.RABBITMQ_URL));
-  } catch (error) {
-    logger.error("Error connecting to RabbitMQ: ", error);
   }
+  throw new AppError("Failed to connect to RabbitMQ after retries");
 }
 
 export async function initializeRabbitMQ() {

@@ -10,9 +10,17 @@ services:
     depends_on:
       - redis
       - rabbitmq
+      - user-service
+      - post-service
+      - media-service
+      - search-service
     environment:
-      - REDIS_URL: redis://redis:6379
-      - RABBITMQ_URL: amqp://localhost:5672
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://rabbitmq:5672
+      USER_SERVICE_URL: http://user-service:3001
+      POST_SERVICE_URL: http://post-service:3002
+      MEDIA_SERVICE_URL: http://media-service:3003
+      SEARCH_SERVICE_URL: http://search-service:3004
 
   user-service:
     build: ./user-service
@@ -21,9 +29,10 @@ services:
     depends_on:
       - redis
       - rabbitmq
+
     environment:
-      - REDIS_URL: redis://redis:6379
-      - RABBITMQ_URL: amqp://localhost:5672
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://rabbitmq:5672
 
   post-service:
     build: ./post-service
@@ -33,8 +42,8 @@ services:
       - redis
       - rabbitmq
     environment:
-      - REDIS_URL: redis://redis:6379
-      - RABBITMQ_URL: amqp://localhost:5672
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://rabbitmq:5672
 
   media-service:
     build: ./media-service
@@ -44,8 +53,8 @@ services:
       - redis
       - rabbitmq
     environment:
-      - REDIS_URL: redis://redis:6379
-      - RABBITMQ_URL: amqp://localhost:5672
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://rabbitmq:5672
 
   search-service:
     build: ./search-service
@@ -55,22 +64,22 @@ services:
       - redis
       - rabbitmq
     environment:
-      - REDIS_URL: redis://redis:6379
-      - RABBITMQ_URL: amqp://localhost:5672
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://rabbitmq:5672
 
   redis:
-    image: redis:apline
+    image: redis:alpine
     ports:
       - "6379:6379"
 
   rabbitmq:
     image: rabbitmq:3.10-management-alpine
-    ports:
-      - "5672:5672"
-      - "15672:15672"
+    # ports:
+    #   - "5672:5672"
+    #   - "15672:15672"
 
-  healthcheck:
-    test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-    interval: 30s
-    timeout: 10s
-    retries: 5
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
