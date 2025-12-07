@@ -10,7 +10,19 @@ import { validateUserToken } from "./middleware/auth.middleware.js";
 
 //#region Constants
 const app = express();
-const redisClient = new Redis(process.env.REDIS_URL);
+
+const redisClient = new Redis(process.env.REDIS_URL, {
+  maxRetriesPerRequest: null, // retry commands indefinitely
+  retryStrategy(times) {
+    const delay = Math.min(times * 50, 2000);
+    console.log(`Redis reconnect attempt #${times}, retrying in ${delay}ms`);
+    return delay;
+  },
+});
+
+redisClient.on("connect", (info) => logger.info("✅ Redis connected", info));
+redisClient.on("error", (err) => logger.error("❌ Redis error:", err));
+
 const expressEndpointRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
@@ -42,7 +54,8 @@ const proxyOptions = {
   },
 };
 
-app.set("trust proxy", 1);
+//NOTE: Trust private/internal proxies (10.x.x.x)
+app.set("trust proxy", (ip) => ip.startsWith("10."));
 //#endregion
 
 //#region Middleware
