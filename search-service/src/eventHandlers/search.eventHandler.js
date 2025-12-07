@@ -30,4 +30,30 @@ export async function handlePostCreated(event) {
   }
 }
 
-export async function handlePostDeleted(event) {}
+export async function handlePostDeleted(event) {
+  const { postId, userId, mediaIds } = event;
+  try {
+    if ([postId, userId].some((item) => !item)) {
+      logger.warn(`Invalid event data: ${event}`);
+      throw new AppError("Invalid event data", 400);
+    }
+
+    const postSearchToDelete = await PostSearch.findOneAndDelete({ postId });
+
+    if (!postSearchToDelete) {
+      logger.warn(
+        `Failed to delete related post search document for post: ${postId}`,
+      );
+      throw new AppError(
+        `Failed to delete related post search document for post: ${postId}`,
+        500,
+      );
+    }
+
+    logger.info(
+      `Post search deleted: [POST:${postId}]-[PostSearch:${postSearchToDelete._id.toString()}]`,
+    );
+  } catch (error) {
+    logger.error("Error handling post deletion event", error);
+  }
+}

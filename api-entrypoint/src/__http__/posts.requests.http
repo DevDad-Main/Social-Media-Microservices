@@ -7,14 +7,14 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OTMzM
 {
  "content": "test content goes here",
  "postType": "text_with_image",
- "mediaIds": ["693430d48059951963f563db"]
+ "mediaIds": ["693558147bbcd9a43a984b0d"]
 }
 
 
 ### Get All Posts Route
 GET  http://localhost:3000/v1/posts/get-posts
 content-type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OTMzMTUxZjZlNGY2OGMxNDE5ZTg2ZjUiLCJ1c2VybmFtZSI6InRlc3QxIiwiaWF0IjoxNzY0OTU1NDg0LCJleHAiOjE3NjUwNDE4ODR9.qvTN9BCA9oVmSxEzJb3TEtsZxWFaAlXLh_b2835P79s
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OTMzMTUxZjZlNGY2OGMxNDE5ZTg2ZjUiLCJ1c2VybmFtZSI6InRlc3QxIiwiaWF0IjoxNzY1MDQ2MzU3LCJleHAiOjE3NjUxMzI3NTd9.F54js48LxSHw7v6_k3YvresjxvaLyKd9oBuMs7Z0r60
 
 
 ### Get Post By Id Route
@@ -24,6 +24,6 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OTMwO
 
 
 ### Delete Post By Id Route
-DELETE http://localhost:3000/v1/posts/delete-post/693432fe93d59b2f96af969b
+DELETE http://localhost:3000/v1/posts/delete-post/6935582820fc82c0bfa6e632
 content-type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OTMzMTUxZjZlNGY2OGMxNDE5ZTg2ZjUiLCJ1c2VybmFtZSI6InRlc3QxIiwiaWF0IjoxNzY0OTU1NDg0LCJleHAiOjE3NjUwNDE4ODR9.qvTN9BCA9oVmSxEzJb3TEtsZxWFaAlXLh_b2835P79s
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OTMzMTUxZjZlNGY2OGMxNDE5ZTg2ZjUiLCJ1c2VybmFtZSI6InRlc3QxIiwiaWF0IjoxNzY1MDQ2MzU3LCJleHAiOjE3NjUxMzI3NTd9.F54js48LxSHw7v6_k3YvresjxvaLyKd9oBuMs7Z0r60
