@@ -55,12 +55,18 @@ export const registerUserValidation = [
 //#endregion
 
 //#region Login User Validation
-export const validateLogin = (data) => {
-  const schema = joi.object({
-    email: joi.string().email().required(),
-    password: joi.string().min(6).max(14).required(),
-  });
-
-  return schema.validate(data);
-};
+export const loginUserValidation = [
+  body("username")
+    .notEmpty()
+    .withMessage("Username can't be empty!")
+    .bail()
+    .custom(async (value) => {
+      const userToFind = await User.findOne({ username: value });
+      if (!userToFind) {
+        throw new Error("User Not Found!");
+      }
+    })
+    .trim(),
+  body("password").notEmpty().withMessage("Password can't be empty!"),
+];
 //#endregion

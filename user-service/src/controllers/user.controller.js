@@ -9,6 +9,14 @@ import {
 import { RefreshToken } from "../models/RefreshToken.model.js";
 import { validationResult } from "express-validator";
 
+//#region Constants
+const HTTP_OPTIONS = {
+  httpOnly: true,
+  secure: true,
+  sameSite: "none",
+};
+//#endregion
+
 //#region Register User
 export const registerUser = catchAsync(async (req, res, next) => {
   const { firstName, lastName, email, username, password } = req.body;
@@ -16,7 +24,7 @@ export const registerUser = catchAsync(async (req, res, next) => {
 
   if (!errors.isEmpty()) {
     logger.warn("Registration Validation Error: ", JSON.stringify(errors));
-    return sendError(res, errors[0], 400, errors);
+    return sendError(res, errors[0].msg, 400, [...errors]);
   }
 
   let user = await User.findOne({ $or: [{ username }, { email }] });
@@ -42,14 +50,15 @@ export const registerUser = catchAsync(async (req, res, next) => {
 //#region Login User
 export const loginUser = catchAsync(async (req, res, next) => {
   const { email, password } = req.body;
-  // const { error } = validateLogin(req.body);
-  //
-  // if (error) {
-  //   logger.warn("Login Validation Error: ", error.details[0].message);
-  //   return sendError(res, error.details[0].message, 400);
-  // }
 
-  const user = await User.findOne({ email });
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    logger.warn("Login Validation Error: ", JSON.stringify(errors));
+    return sendError(res, errors[0].msg, 400, [...errors]);
+  }
+
+  const user = await User.findOne({ email }).select("-password");
 
   if (!user) {
     logger.warn("User Not Found");
@@ -67,10 +76,19 @@ export const loginUser = catchAsync(async (req, res, next) => {
 
   return sendSuccess(
     res,
-    { accesstoken, refreshToken, userId: user._id },
+    {
+      accesstoken,
+      refreshToken,
+      userId: user._id,
+      user: {
+        username: user.username,
+      },
+    },
     "Login Successful",
     200,
-  );
+  )
+    .cookie("accessToken", accesstoken, HTTP_OPTIONS)
+    .cookie("refreshToken", refreshToken, HTTP_OPTIONS);
 });
 //#endregion
 
