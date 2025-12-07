@@ -3,24 +3,59 @@ import bcrypt from "bcrypt";
 
 const userSchema = new mongoose.Schema(
   {
+    email: {
+      type: String,
+      required: true,
+    },
+    full_name: {
+      type: String,
+      required: true,
+    },
     username: {
       type: String,
       required: true,
       unique: true,
-      trim: true,
-      min: 3,
-      max: 50,
-    },
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-      trim: true,
-      lowercase: true,
     },
     password: {
       type: String,
       required: true,
+    },
+    bio: {
+      type: String,
+      default: "Hey there! I'm using Knect.",
+    },
+    profile_picture: {
+      type: String,
+      default: "",
+    },
+    cover_photo: {
+      type: String,
+      default: "",
+    },
+    location: {
+      type: String,
+      default: "",
+    },
+    followers: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+    following: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+    connections: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+    refreshToken: {
+      type: String,
     },
   },
   {
@@ -28,6 +63,7 @@ const userSchema = new mongoose.Schema(
   },
 );
 
+//#region Pre-Save Hook
 userSchema.pre("save", async function (next) {
   if (this.isModified("password")) {
     try {
@@ -38,7 +74,9 @@ userSchema.pre("save", async function (next) {
     }
   }
 });
+//#endregion
 
+//#region comparePassword Method
 userSchema.methods.comparePassword = async function (passwordToCompare) {
   try {
     return await bcrypt.compare(passwordToCompare, this.password);
@@ -46,6 +84,7 @@ userSchema.methods.comparePassword = async function (passwordToCompare) {
     throw error;
   }
 };
+//#endregion
 
 userSchema.index({ username: "text" });
 

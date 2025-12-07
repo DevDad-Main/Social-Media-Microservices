@@ -4,6 +4,8 @@ POST http://localhost:3000/v1/auth/register
 content-type: application/json
 
 {
+  "firstName": "Hello",
+  "lastName": "World",
   "username": "test1",
   "email": "test1@test.com",
   "password": "1234567"

@@ -1,25 +1,22 @@
 import { generateTokens } from "../utils/generateToken.utils.js";
 import { User } from "../models/User.model.js";
 import {
-  validateRegistration,
-  validateLogin,
-} from "../utils/validation.utils.js";
-import {
   catchAsync,
   logger,
   sendError,
   sendSuccess,
 } from "devdad-express-utils";
 import { RefreshToken } from "../models/RefreshToken.model.js";
+import { validationResult } from "express-validator";
 
 //#region Register User
 export const registerUser = catchAsync(async (req, res, next) => {
-  const { username, email, password } = req.body;
-  const { error } = validateRegistration(req.body);
+  const { firstName, lastName, email, username, password } = req.body;
+  const errors = validationResult(req);
 
-  if (error) {
-    logger.warn("Registration Validation Error: ", error.details[0].message);
-    return sendError(res, error.details[0].message, 400);
+  if (!errors.isEmpty()) {
+    logger.warn("Registration Validation Error: ", JSON.stringify(errors));
+    return sendError(res, errors[0], 400, errors);
   }
 
   let user = await User.findOne({ $or: [{ username }, { email }] });
@@ -30,26 +27,27 @@ export const registerUser = catchAsync(async (req, res, next) => {
   }
 
   user = new User({
-    username,
+    full_name: `${firstName === " " ? "First" : firstName} ${lastName === " " ? "Last" : lastName}`,
     email,
+    username,
     password,
   });
 
-  await user.save(); // NOTE: Trigger pre-save hook
+  await user.save(); // NOTE: Trigger pre-save hash password hook
 
-  return sendSuccess(res, {}, "User Registered Successfully", 201);
+  return sendSuccess(res, user, "User Registered Successfully", 201);
 });
 //#endregion
 
 //#region Login User
 export const loginUser = catchAsync(async (req, res, next) => {
   const { email, password } = req.body;
-  const { error } = validateLogin(req.body);
-
-  if (error) {
-    logger.warn("Login Validation Error: ", error.details[0].message);
-    return sendError(res, error.details[0].message, 400);
-  }
+  // const { error } = validateLogin(req.body);
+  //
+  // if (error) {
+  //   logger.warn("Login Validation Error: ", error.details[0].message);
+  //   return sendError(res, error.details[0].message, 400);
+  // }
 
   const user = await User.findOne({ email });
 
