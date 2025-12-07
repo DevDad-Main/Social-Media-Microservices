@@ -25,12 +25,12 @@ export const generateTokens = async (user) => {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
-    await RefreshToken.create({
-      token: refreshToken,
-      user: user._id,
-      expiresAt,
-    });
-
+    // await RefreshToken.create({
+    //   token: refreshToken,
+    //   user: user._id,
+    //   expiresAt,
+    // });
+    //
     return { accesstoken, refreshToken };
   } catch (error) {
     throw error;

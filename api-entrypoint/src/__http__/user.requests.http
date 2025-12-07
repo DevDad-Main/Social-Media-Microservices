@@ -6,9 +6,9 @@ content-type: application/json
 {
   "firstName": "Hello",
   "lastName": "World",
-  "username": "test1",
-  "email": "test1@test.com",
-  "password": "1234567"
+  "username": "test2",
+  "email": "test2@test.com",
+  "password": "Abc123!"
 }
 
 
@@ -17,8 +17,8 @@ POST http://localhost:3000/v1/auth/login
 content-type: application/json
 
 {
-  "email": "test1@test.com",
-  "password": "1234567"
+  "email": "test2@test.com",
+  "password": "Abc123!"
 }
 
 
@@ -34,10 +34,6 @@ content-type: application/json
 ### Logout Route
 POST http://localhost:3000/v1/auth/logout
 content-type: application/json
-
-{
-  "refreshToken": "0cc4bf80964a81ada00259de9c0b51d9bbe2d41690a5d9edefe53d0605c0e6b174f03ccf75006dc5"
-}
 
 
 

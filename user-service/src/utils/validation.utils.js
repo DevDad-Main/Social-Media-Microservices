@@ -56,12 +56,13 @@ export const registerUserValidation = [
 
 //#region Login User Validation
 export const loginUserValidation = [
-  body("username")
+  body("email")
     .notEmpty()
-    .withMessage("Username can't be empty!")
+    .isEmail()
+    .withMessage("Email can't be empty!")
     .bail()
     .custom(async (value) => {
-      const userToFind = await User.findOne({ username: value });
+      const userToFind = await User.findOne({ email: value });
       if (!userToFind) {
         throw new Error("User Not Found!");
       }

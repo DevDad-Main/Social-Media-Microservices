@@ -58,7 +58,7 @@ export const loginUser = catchAsync(async (req, res, next) => {
     return sendError(res, "Regisrtation Validation Error", 400, errors.array());
   }
 
-  const user = await User.findOne({ email }).select("-password");
+  const user = await User.findOne({ email });
 
   if (!user) {
     logger.warn("User Not Found");
@@ -79,9 +79,9 @@ export const loginUser = catchAsync(async (req, res, next) => {
     {
       accesstoken,
       refreshToken,
-      userId: user._id,
       user: {
         username: user.username,
+        _id: user._id,
       },
     },
     "Login Successful",
@@ -145,21 +145,21 @@ export const generateRefreshToken = catchAsync(async (req, res, next) => {
 
 //#region Logout User
 export const logoutUser = catchAsync(async (req, res, next) => {
-  const { refreshToken } = req.body;
-
-  if (!refreshToken) {
-    logger.warn("Refresh Token Not Found");
-    return sendError(res, "Refresh Token Not Found", 400);
-  }
-
-  const tokenToDelete = await RefreshToken.deleteOne({
-    token: refreshToken,
-  });
-
-  if (tokenToDelete.deletedCount === 0) {
-    logger.warn("Refresh Token Failed To Delete");
-    return sendError(res, "Refresh Token Failed To Delete", 404);
-  }
+  // const { refreshToken } = req.body;
+  //
+  // if (!refreshToken) {
+  //   logger.warn("Refresh Token Not Found");
+  //   return sendError(res, "Refresh Token Not Found", 400);
+  // }
+  //
+  // const tokenToDelete = await RefreshToken.deleteOne({
+  //   token: refreshToken,
+  // });
+  //
+  // if (tokenToDelete.deletedCount === 0) {
+  //   logger.warn("Refresh Token Failed To Delete");
+  //   return sendError(res, "Refresh Token Failed To Delete", 404);
+  // }
 
   return sendSuccess(res, {}, "Logout Successful", 200)
     .clearCookie("accessToken", HTTP_OPTIONS)
