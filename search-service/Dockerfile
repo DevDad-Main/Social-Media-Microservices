@@ -4,10 +4,10 @@ WORKDIR /usr/src/app
 
 COPY package*.json ./
 
-RUN npm ci --only=production
+RUN npm ci
 
 COPY . .
 
-EXPOSE 3003
+EXPOSE 3004
 
-CMD [ "node", "src/server.js" ]
+CMD ["npm", "run", "dev"]

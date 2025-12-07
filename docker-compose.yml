@@ -13,12 +13,15 @@ services:
       - media-service
       - search-service
     environment:
+      NODE_ENV: development
       REDIS_URL: redis://redis:6379
       RABBITMQ_URL: amqp://rabbitmq:5672
       USER_SERVICE_URL: http://user-service:3001
       POST_SERVICE_URL: http://post-service:3002
       MEDIA_SERVICE_URL: http://media-service:3003
       SEARCH_SERVICE_URL: http://search-service:3004
+    volumes:
+      - ./api-entrypoint/src:/usr/src/app/src
 
   user-service:
     build: ./user-service
@@ -27,10 +30,12 @@ services:
     depends_on:
       - redis
       - rabbitmq
-
     environment:
+      NODE_ENV: development
       REDIS_URL: redis://redis:6379
       RABBITMQ_URL: amqp://rabbitmq:5672
+    volumes:
+      - ./user-service/src:/usr/src/app/src
 
   post-service:
     build: ./post-service
@@ -40,8 +45,11 @@ services:
       - redis
       - rabbitmq
     environment:
+      NODE_ENV: development
       REDIS_URL: redis://redis:6379
       RABBITMQ_URL: amqp://rabbitmq:5672
+    volumes:
+      - ./post-service/src:/usr/src/app/src
 
   media-service:
     build: ./media-service
@@ -51,8 +59,11 @@ services:
       - redis
       - rabbitmq
     environment:
+      NODE_ENV: development
       REDIS_URL: redis://redis:6379
       RABBITMQ_URL: amqp://rabbitmq:5672
+    volumes:
+      - ./media-service/src:/usr/src/app/src
 
   search-service:
     build: ./search-service
@@ -62,8 +73,11 @@ services:
       - redis
       - rabbitmq
     environment:
+      NODE_ENV: development
       REDIS_URL: redis://redis:6379
       RABBITMQ_URL: amqp://rabbitmq:5672
+    volumes:
+      - ./search-service/src:/usr/src/app/src
 
   redis:
     image: redis:alpine
@@ -75,9 +89,18 @@ services:
     # ports:
     #   - "5672:5672"
     #   - "15672:15672"
-
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 30s
       timeout: 10s
       retries: 5
+
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+volumes:
+  mongodb_data:

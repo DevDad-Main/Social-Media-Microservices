@@ -34,34 +34,42 @@ The application consists of the following microservices:
 - Docker & Docker Compose (for containerized deployment)
 - Cloudinary account (for media uploads)
 
-## Installation
-
-### Option 1: Docker Compose (Recommended)
+## Quick Start
 
 1. Clone the repository:
+
    ```bash
    git clone https://github.com/DevDad-Main/Social-Media-Microservices
    cd Social-Media-Microservices
    ```
 
-2. Create environment files for each service (see Environment Variables section)
+2. Create `.env` files in each service directory (see Environment Variables section below)
 
 3. Start all services:
+
    ```bash
    docker-compose up --build
    ```
 
 4. The API will be available at `http://localhost:3000`
 
+To stop the services:
+
+```bash
+docker-compose down
+```
+
 ### Option 2: Local Development
 
 1. Clone the repository:
+
    ```bash
    git clone https://github.com/DevDad-Main/Social-Media-Microservices
    cd Social-Media-Microservices
    ```
 
 2. Start external services:
+
    ```bash
    # Using Docker for external dependencies
    docker run -d --name redis -p 6379:6379 redis:alpine
@@ -70,6 +78,7 @@ The application consists of the following microservices:
    ```
 
 3. Install dependencies for each service:
+
    ```bash
    # API Gateway
    cd api-entrypoint && npm install && cd ..
@@ -90,6 +99,7 @@ The application consists of the following microservices:
 4. Create `.env` files in each service directory (see Environment Variables section)
 
 5. Start each microservice in separate terminals:
+
    ```bash
    # Terminal 1: API Gateway
    cd api-entrypoint && npm run dev
@@ -109,9 +119,12 @@ The application consists of the following microservices:
 
 ## Environment Variables
 
-Create `.env` files in each service directory with the following variables:
+Create `.env` files in each service directory. Use the appropriate URLs based on your deployment method.
+
+### For Docker Compose (Quick Start)
 
 ### API Gateway (.env)
+
 ```
 PORT=3000
 REDIS_URL=redis://redis:6379
@@ -122,6 +135,7 @@ SEARCH_SERVICE_URL=http://search-service:3004
 ```
 
 ### User Service (.env)
+
 ```
 PORT=3001
 MONGO_URI=mongodb://mongodb:27017/social_media_users
@@ -130,6 +144,7 @@ JWT_SECRET=your_jwt_secret_here
 ```
 
 ### Post Service (.env)
+
 ```
 PORT=3002
 MONGO_URI=mongodb://mongodb:27017/social_media_posts
@@ -139,6 +154,7 @@ JWT_SECRET=your_jwt_secret_here
 ```
 
 ### Media Service (.env)
+
 ```
 PORT=3003
 MONGO_URI=mongodb://mongodb:27017/social_media_media
@@ -151,6 +167,7 @@ CLOUDINARY_API_SECRET=your_api_secret
 ```
 
 ### Search Service (.env)
+
 ```
 PORT=3004
 MONGO_URI=mongodb://mongodb:27017/social_media_search
@@ -158,6 +175,78 @@ REDIS_URL=redis://redis:6379
 RABBITMQ_URL=amqp://rabbitmq:5672
 JWT_SECRET=your_jwt_secret_here
 ```
+
+### For Local Development
+
+Replace the service names with `localhost` in the URLs above (e.g., `REDIS_URL=redis://localhost:6379`, `MONGO_URI=mongodb://localhost:27017/social_media_users`).
+PORT=3000
+REDIS_URL=redis://redis:6379
+USER_SERVICE_URL=http://user-service:3001
+POST_SERVICE_URL=http://post-service:3002
+MEDIA_SERVICE_URL=http://media-service:3003
+SEARCH_SERVICE_URL=http://search-service:3004
+
+```
+
+### API Gateway (.env)
+```
+
+PORT=3000
+REDIS_URL=redis://localhost:6379
+USER_SERVICE_URL=http://localhost:3001
+POST_SERVICE_URL=http://localhost:3002
+MEDIA_SERVICE_URL=http://localhost:3003
+SEARCH_SERVICE_URL=http://localhost:3004
+
+```
+
+### User Service (.env)
+```
+
+PORT=3001
+MONGO_URI=mongodb://localhost:27017/social_media_users
+REDIS_URL=redis://localhost:6379
+JWT_SECRET=your_jwt_secret_here
+
+```
+
+### Post Service (.env)
+```
+
+PORT=3002
+MONGO_URI=mongodb://localhost:27017/social_media_posts
+REDIS_URL=redis://localhost:6379
+RABBITMQ_URL=amqp://localhost:5672
+JWT_SECRET=your_jwt_secret_here
+
+```
+
+### Media Service (.env)
+```
+
+PORT=3003
+MONGO_URI=mongodb://localhost:27017/social_media_media
+REDIS_URL=redis://localhost:6379
+RABBITMQ_URL=amqp://localhost:5672
+JWT_SECRET=your_jwt_secret_here
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+
+```
+
+### Search Service (.env)
+```
+
+PORT=3004
+MONGO_URI=mongodb://localhost:27017/social_media_search
+REDIS_URL=redis://localhost:6379
+RABBITMQ_URL=amqp://localhost:5672
+JWT_SECRET=your_jwt_secret_here
+
+````
+
+**Note**: For Docker Compose deployment, replace `localhost` with the service names (e.g., `mongodb`, `redis`, `rabbitmq`) as shown in the Quick Start environment variables above.
 
 ## Event-Driven Architecture
 
@@ -186,36 +275,38 @@ cd post-service && npm test
 
 # Media Service tests (Note: requires Cloudinary credentials)
 cd media-service && npm test
-```
+````
 
 Tests use MongoDB Memory Server for isolated database testing.
 
 ## API Endpoints
 
 ### Authentication
+
 - `POST /v1/auth/register` - Register a new user
 - `POST /v1/auth/login` - Login user
 - `POST /v1/auth/refresh-token` - Refresh access token
 - `POST /v1/auth/logout` - Logout user
 
 ### Posts (Protected)
+
 - `POST /v1/posts/create-post` - Create a new post
 - `GET /v1/posts/get-posts` - Get paginated posts
 - `GET /v1/posts/get-post/:id` - Get post by ID
 - `DELETE /v1/posts/delete-post/:id` - Delete post by ID
 
 ### Media (Protected)
+
 - `POST /v1/media/upload-media` - Upload media file (multipart/form-data)
 
 ### Search (Protected)
+
 - `GET /v1/search/posts?query=search_term` - Search posts by content
 
 ## Development Tools
 
 - **HTTP Requests**: Use the `.http` files in `api-entrypoint/src/__http__/` for testing endpoints
 - **Docker**: Full containerization with docker-compose.yml
-- **Linting**: ESLint configuration available
-- **Git Hooks**: Pre-commit hooks for code quality
 
 ## Security Features
 

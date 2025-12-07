@@ -23,8 +23,8 @@ export const registerUser = catchAsync(async (req, res, next) => {
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
-    logger.warn("Registration Validation Error: ", JSON.stringify(errors));
-    return sendError(res, errors[0].msg, 400, [...errors]);
+    logger.warn("Registration Validation Error: ", errors);
+    return sendError(res, "Registration Validation Error", 400, errors.array());
   }
 
   let user = await User.findOne({ $or: [{ username }, { email }] });
@@ -54,8 +54,8 @@ export const loginUser = catchAsync(async (req, res, next) => {
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
-    logger.warn("Login Validation Error: ", JSON.stringify(errors));
-    return sendError(res, errors[0].msg, 400, [...errors]);
+    logger.warn("Login Validation Error: ", errors);
+    return sendError(res, "Regisrtation Validation Error", 400, errors.array());
   }
 
   const user = await User.findOne({ email }).select("-password");
