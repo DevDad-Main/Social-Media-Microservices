@@ -24,14 +24,6 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "Hey there! I'm using Knect.",
     },
-    profile_picture: {
-      type: String,
-      default: "",
-    },
-    cover_photo: {
-      type: String,
-      default: "",
-    },
     location: {
       type: String,
       default: "",

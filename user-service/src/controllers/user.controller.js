@@ -207,7 +207,6 @@ export const getUserProfile = catchAsync(async (req, res, next) => {
   let media = [];
   try {
     media = await fetchMediaByUserId(id);
-    console.log(media);
     logger.info("Media URLS Fetched successfully", { media });
   } catch (error) {
     logger.error("Failed to fetch media:", { error });
@@ -221,11 +220,14 @@ export const getUserProfile = catchAsync(async (req, res, next) => {
   }
 
   //NOTE: Map profilePhoto and coverPhoto
+  const mediaData = media.data || [];
+  const profilePhoto = mediaData.find((m) => m.type === "profile")?.url || null;
+  const coverPhoto = mediaData.find((m) => m.type === "cover")?.url || null;
+
   const enrichedProfile = {
     ...profile.toObject(),
-    media: media,
-    // profilePhoto: media.find((m) => m.type === "profile") || null,
-    // coverPhoto: media.find((m) => m.type === "cover") || null,
+    profilePhoto,
+    coverPhoto,
   };
 
   //NOTE: Cache enriched profile
