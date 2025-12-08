@@ -11,12 +11,12 @@ cloudinary.config({
 });
 
 //#region Upload Single Media File
-export const uploadSingleMedia = async (file, userId) => {
+export const uploadSingleMedia = async (file, userId, type) => {
   const { originalname, mimetype, buffer } = file;
 
   let cloudinaryResponse;
   let retries = 3;
-  
+
   while (retries > 0) {
     try {
       cloudinaryResponse = await uploadMediaBufferToCloudinary(buffer);
@@ -28,7 +28,7 @@ export const uploadSingleMedia = async (file, userId) => {
         throw new AppError("Cloudinary upload failed", 500);
       }
       logger.warn(`Cloudinary upload failed, retrying... (${3 - retries}/3)`);
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
     }
   }
 
@@ -43,6 +43,7 @@ export const uploadSingleMedia = async (file, userId) => {
     mimeType: mimetype,
     url: cloudinaryResponse.secure_url,
     user: userId,
+    type,
   });
 
   if (!created) throw new AppError("Failed to create media", 500);

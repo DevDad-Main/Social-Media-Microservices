@@ -6,9 +6,12 @@ import {
 } from "devdad-express-utils";
 import { uploadSingleMedia } from "../utils/cloudinary.utils.js";
 import { Media } from "../models/Media.model.js";
+import { isValidObjectId } from "mongoose";
 
 //#region Upload Media Controller
 export const uploadMedia = catchAsync(async (req, res, next) => {
+  const { profile_photo_type, cover_photo_type } = req.body;
+
   const profilePhoto = req.files?.profile_photo?.[0];
   const coverPhoto = req.files?.cover_photo?.[0];
 
@@ -20,9 +23,39 @@ export const uploadMedia = catchAsync(async (req, res, next) => {
     return sendError(res, "Cover photo is required", 400);
   }
 
+  if (!profile_photo_type || !cover_photo_type) {
+    logger.warn(
+      `Missing Profile Type or Cover Type.. ${profile_photo_type}, ${cover_photo_type}`,
+    );
+    return sendError(
+      res,
+      `Missing Profile Type or Cover Type.. ${profile_photo_type}, ${cover_photo_type}`,
+      400,
+    );
+  }
+
+  if (profile_photo_type !== "profile") {
+    logger.warn("Profile Type is not equal to 'profile'");
+    return sendError(res, "Profile Type is not equal to 'profile'", 400);
+  }
+
+  if (cover_photo_type !== "cover") {
+    logger.warn("Cover Type is not equal to 'cover'");
+    return sendError(res, "Cover Type is not equal to 'cover'", 400);
+  }
+
   try {
-    const profileMedia = await uploadSingleMedia(profilePhoto, req.user._id);
-    const coverMedia = await uploadSingleMedia(coverPhoto, req.user._id);
+    const profileMedia = await uploadSingleMedia(
+      profilePhoto,
+      req.user._id,
+      profile_photo_type,
+    );
+
+    const coverMedia = await uploadSingleMedia(
+      coverPhoto,
+      req.user._id,
+      cover_photo_type,
+    );
 
     return sendSuccess(
       res,

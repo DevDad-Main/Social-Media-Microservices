@@ -20,10 +20,6 @@ mediaRouter.post(
   uploadMedia,
 );
 
-mediaRouter.get(
-  "/fetch-user-media/:userId",
-  authenticateUserMiddleware,
-  fetchUserMedia,
-);
+mediaRouter.get("/fetch-user-media/:userId", fetchUserMedia);
 
 export default mediaRouter;

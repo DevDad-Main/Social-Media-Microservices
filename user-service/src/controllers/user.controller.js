@@ -190,7 +190,7 @@ export const getUserProfile = catchAsync(async (req, res, next) => {
   if (cachedProfile) {
     return sendSuccess(
       res,
-      cachedProfile,
+      JSON.parse(cachedProfile),
       "User Profile Fetched (cached)",
       200,
     );
@@ -208,7 +208,7 @@ export const getUserProfile = catchAsync(async (req, res, next) => {
   try {
     media = await fetchMediaByUserId(id);
     console.log(media);
-    logger.info("Media URLS Fetched successfully", media);
+    logger.info("Media URLS Fetched successfully", { media });
   } catch (error) {
     logger.error("Failed to fetch media:", { error });
     //NOTE: Instead of us returning an error we can just send the Profile as it is
@@ -223,8 +223,9 @@ export const getUserProfile = catchAsync(async (req, res, next) => {
   //NOTE: Map profilePhoto and coverPhoto
   const enrichedProfile = {
     ...profile.toObject(),
-    profilePhoto: media.find((m) => m.type === "profile") || null,
-    coverPhoto: media.find((m) => m.type === "cover") || null,
+    media: media,
+    // profilePhoto: media.find((m) => m.type === "profile") || null,
+    // coverPhoto: media.find((m) => m.type === "cover") || null,
   };
 
   //NOTE: Cache enriched profile
