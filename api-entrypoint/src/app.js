@@ -68,10 +68,29 @@ app.use(express.json());
 app.use(expressEndpointRateLimiter);
 //#endregion
 
-//#region Proxies
-//#region User Service Proxy
+//#region User Service Proxy - Public Auth Routes (no token required)
 app.use(
   "/v1/auth",
+  proxy(process.env.USER_SERVICE_URL, {
+    ...proxyOptions,
+    // NOTE: Allows us to overwrite certain Request Options before proxying
+    proxyReqOptDecorator: (proxyReqOptions, srcReq) => {
+      proxyReqOptions.headers["content-type"] = "application/json";
+      return proxyReqOptions;
+    },
+    userResDecorator: (proxyRes, proxyResData, userReq, userRes) => {
+      logger.info(
+        `Response Received from User Service: ${proxyRes.statusCode}`,
+      );
+      return proxyResData;
+    },
+  }),
+);
+//#endregion
+
+//#region User Service Proxy - Protected User Routes (token required)
+app.use(
+  "/v1/users",
   validateUserToken,
   proxy(process.env.USER_SERVICE_URL, {
     ...proxyOptions,
@@ -161,7 +180,6 @@ app.use(
     parseReqBody: false,
   }),
 );
-//#endregion
 //#endregion
 
 //#region Global Error Handler

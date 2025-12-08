@@ -1,12 +1,14 @@
 import express from "express";
 import { errorHandler, logger, sendError } from "devdad-express-utils";
 import userRouter from "./routes/user.routes.js";
+import authenticatedUsersRouter from "./routes/authenticatedUsers.routes.js";
 import helmet from "helmet";
 import { RateLimiterRedis } from "rate-limiter-flexible";
 import rateLimit from "express-rate-limit";
 import Redis from "ioredis";
 import RedisStore from "rate-limit-redis";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 
 //#region Constants
 const app = express();
@@ -38,6 +40,7 @@ app.use(helmet());
 app.use(cors());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+app.use(cookieParser());
 
 app.use((req, res, next) => {
   rateLimiter
@@ -59,6 +62,15 @@ app.use(
     next();
   },
   userRouter,
+);
+
+app.use(
+  "/api/users",
+  (req, res, next) => {
+    req.redisClient = redisClient;
+    next();
+  },
+  authenticatedUsersRouter,
 );
 //#endregion
 

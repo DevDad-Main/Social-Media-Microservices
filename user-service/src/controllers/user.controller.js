@@ -164,9 +164,11 @@ export const logoutUser = catchAsync(async (req, res, next) => {
   //   return sendError(res, "Refresh Token Failed To Delete", 404);
   // }
 
-  return sendSuccess(res, {}, "Logout Successful", 200)
+  res
     .clearCookie("accessToken", HTTP_OPTIONS)
     .clearCookie("refreshToken", HTTP_OPTIONS);
+
+  return sendSuccess(res, {}, "Logout Successful", 200);
 });
 //#endregion
 
@@ -197,7 +199,7 @@ export const getUserProfile = catchAsync(async (req, res, next) => {
   }
 
   //NOTE: Fetch user from DB
-  const profile = await User.findById(id);
+  const profile = await User.findById(id).select("-password");
   if (!profile) {
     logger.warn("User Not Found");
     return sendError(res, "User Not Found", 404);

@@ -13,10 +13,10 @@ import {
 
 const userRouter = Router();
 
+// Public auth routes (no token required)
 userRouter.post("/register", registerUserValidation, registerUser);
 userRouter.post("/login", loginUserValidation, loginUser);
 userRouter.post("/logout", logoutUser);
 userRouter.post("/refresh-token", generateRefreshToken);
-userRouter.get("/profile/:id", getUserProfile);
 
 export default userRouter;
