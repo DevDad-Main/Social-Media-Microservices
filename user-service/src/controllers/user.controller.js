@@ -74,6 +74,9 @@ export const loginUser = catchAsync(async (req, res, next) => {
 
   const { accesstoken, refreshToken } = await generateTokens(user);
 
+  res
+    .cookie("accessToken", accesstoken, HTTP_OPTIONS)
+    .cookie("refreshToken", refreshToken, HTTP_OPTIONS);
   return sendSuccess(
     res,
     {
@@ -86,9 +89,7 @@ export const loginUser = catchAsync(async (req, res, next) => {
     },
     "Login Successful",
     200,
-  )
-    .cookie("accessToken", accesstoken, HTTP_OPTIONS)
-    .cookie("refreshToken", refreshToken, HTTP_OPTIONS);
+  );
 });
 //#endregion
 

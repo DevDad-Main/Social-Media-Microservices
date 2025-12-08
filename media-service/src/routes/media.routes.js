@@ -5,14 +5,15 @@ import { uploadMedia } from "../controllers/media.controller.js";
 
 const mediaRouter = Router();
 
-mediaRouter.use(authenticateUserMiddleware);
+// mediaRouter.use(authenticateUserMiddleware);
 
 mediaRouter.post(
-  "/upload-media/user-register",
+  "/upload-user-media",
   upload.fields([
-    { name: "profile_picture", maxcount: 1 },
+    { name: "profile_photo", maxcount: 1 },
     { name: "cover_photo", maxcount: 1 },
   ]),
+  authenticateUserMiddleware,
   uploadMedia,
 );
 

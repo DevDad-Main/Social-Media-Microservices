@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import { errorHandler, logger, sendError } from "devdad-express-utils";
 import Redis from "ioredis";
 import helmet from "helmet";
@@ -61,6 +62,7 @@ app.set("trust proxy", (ip) => ip.startsWith("10."));
 //#region Middleware
 app.use(helmet());
 app.use(cors());
+app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(expressEndpointRateLimiter);

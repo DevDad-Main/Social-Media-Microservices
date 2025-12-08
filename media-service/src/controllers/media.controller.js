@@ -8,10 +8,10 @@ import { uploadSingleMedia } from "../utils/cloudinary.utils.js";
 
 //#region Upload Media Controller
 export const uploadMedia = catchAsync(async (req, res, next) => {
-  const profilePicture = req.files?.profile_picture?.[0];
+  const profilePhoto = req.files?.profile_photo?.[0];
   const coverPhoto = req.files?.cover_photo?.[0];
 
-  if (!profilePicture) {
+  if (!profilePhoto) {
     return sendError(res, "Profile picture is required", 400);
   }
 
@@ -20,7 +20,7 @@ export const uploadMedia = catchAsync(async (req, res, next) => {
   }
 
   try {
-    const profileMedia = await uploadSingleMedia(profilePicture, req.user._id);
+    const profileMedia = await uploadSingleMedia(profilePhoto, req.user._id);
     const coverMedia = await uploadSingleMedia(coverPhoto, req.user._id);
 
     return sendSuccess(

@@ -7,6 +7,7 @@ import rateLimit from "express-rate-limit";
 import Redis from "ioredis";
 import RedisStore from "rate-limit-redis";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 
 //#region Constants
 const app = express();
@@ -36,8 +37,8 @@ const expressEndpointRateLimiter = rateLimit({
 app.use(helmet());
 //TODO: Add CORS custom configuration
 app.use(cors());
-app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+app.use(cookieParser());
 
 app.use((req, res, next) => {
   rateLimiter
@@ -51,7 +52,7 @@ app.use((req, res, next) => {
 //#endregion
 
 //#region Route Entry Points
-app.use("/api/media/upload-media", expressEndpointRateLimiter);
+app.use("/api/media/upload-media/user-register", expressEndpointRateLimiter);
 
 app.use(
   "/api/media",
