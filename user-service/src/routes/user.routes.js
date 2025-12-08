@@ -4,6 +4,7 @@ import {
   loginUser,
   generateRefreshToken,
   logoutUser,
+  getUserProfile,
 } from "../controllers/user.controller.js";
 import {
   loginUserValidation,
@@ -16,5 +17,6 @@ userRouter.post("/register", registerUserValidation, registerUser);
 userRouter.post("/login", loginUserValidation, loginUser);
 userRouter.post("/logout", logoutUser);
 userRouter.post("/refresh-token", generateRefreshToken);
+userRouter.get("/profile/:id", getUserProfile);
 
 export default userRouter;

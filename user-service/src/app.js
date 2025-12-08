@@ -52,7 +52,14 @@ app.use((req, res, next) => {
 
 //#region Route Entry Points
 app.use("/api/auth/register", expressEndpointRateLimiter);
-app.use("/api/auth", userRouter);
+app.use(
+  "/api/auth",
+  (req, res, next) => {
+    req.redisClient = redisClient;
+    next();
+  },
+  userRouter,
+);
 //#endregion
 
 //#region Global Error Handler

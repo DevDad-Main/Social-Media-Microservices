@@ -72,11 +72,13 @@ app.use(expressEndpointRateLimiter);
 //#region User Service Proxy
 app.use(
   "/v1/auth",
+  validateUserToken,
   proxy(process.env.USER_SERVICE_URL, {
     ...proxyOptions,
     // NOTE: Allows us to overwrite certain Request Options before proxying
     proxyReqOptDecorator: (proxyReqOptions, srcReq) => {
       proxyReqOptions.headers["content-type"] = "application/json";
+      proxyReqOptions.headers["x-user-id"] = srcReq.user._id;
       return proxyReqOptions;
     },
     userResDecorator: (proxyRes, proxyResData, userReq, userRes) => {

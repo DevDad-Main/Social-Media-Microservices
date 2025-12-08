@@ -8,6 +8,8 @@ import {
 } from "devdad-express-utils";
 import { RefreshToken } from "../models/RefreshToken.model.js";
 import { validationResult } from "express-validator";
+import { fetchMediaByUserId } from "../utils/fetchUrlsFromMediaService.utils.js";
+import { isValidObjectId } from "mongoose";
 
 //#region Constants
 const HTTP_OPTIONS = {
@@ -165,5 +167,74 @@ export const logoutUser = catchAsync(async (req, res, next) => {
   return sendSuccess(res, {}, "Logout Successful", 200)
     .clearCookie("accessToken", HTTP_OPTIONS)
     .clearCookie("refreshToken", HTTP_OPTIONS);
+});
+//#endregion
+
+//#region Get User By Id
+export const getUserProfile = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+
+  if (!id) {
+    logger.warn("User Id Not Found");
+    return sendError(res, "User Id Not Found", 400);
+  }
+
+  if (!isValidObjectId(id)) {
+    logger.warn(`ID: ${id} is not a valid MongoDB ObjectId`);
+    return sendError(res, `ID: ${id} is not a valid MongoDB ObjectId`, 400);
+  }
+
+  //NOTE: Check cache first
+  const cacheKey = `user_profile:${id}`;
+  const cachedProfile = await req.redisClient.get(cacheKey);
+  if (cachedProfile) {
+    return sendSuccess(
+      res,
+      cachedProfile,
+      "User Profile Fetched (cached)",
+      200,
+    );
+  }
+
+  //NOTE: Fetch user from DB
+  const profile = await User.findById(id);
+  if (!profile) {
+    logger.warn("User Not Found");
+    return sendError(res, "User Not Found", 404);
+  }
+
+  //NOTE: Fetch media from MediaService
+  let media = [];
+  try {
+    media = await fetchMediaByUserId(id);
+    console.log(media);
+    logger.info("Media URLS Fetched successfully", media);
+  } catch (error) {
+    logger.error("Failed to fetch media:", { error });
+    //NOTE: Instead of us returning an error we can just send the Profile as it is
+    return sendSuccess(
+      res,
+      { profile },
+      "User Profile Fetched But Failed To Retrieve Media URLS",
+      200,
+    );
+  }
+
+  //NOTE: Map profilePhoto and coverPhoto
+  const enrichedProfile = {
+    ...profile.toObject(),
+    profilePhoto: media.find((m) => m.type === "profile") || null,
+    coverPhoto: media.find((m) => m.type === "cover") || null,
+  };
+
+  //NOTE: Cache enriched profile
+  await req.redisClient.set(
+    cacheKey,
+    JSON.stringify(enrichedProfile),
+    "EX",
+    300,
+  ); // 5 minutes TTL
+
+  return sendSuccess(res, enrichedProfile, "User Profile Fetched", 200);
 });
 //#endregion

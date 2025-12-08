@@ -1,7 +1,10 @@
 import { Router } from "express";
 import { upload } from "../utils/multer.utils.js";
 import { authenticateUserMiddleware } from "../middleware/auth.middleware.js";
-import { uploadMedia } from "../controllers/media.controller.js";
+import {
+  uploadMedia,
+  fetchUserMedia,
+} from "../controllers/media.controller.js";
 
 const mediaRouter = Router();
 
@@ -15,6 +18,12 @@ mediaRouter.post(
   ]),
   authenticateUserMiddleware,
   uploadMedia,
+);
+
+mediaRouter.get(
+  "/fetch-user-media/:userId",
+  authenticateUserMiddleware,
+  fetchUserMedia,
 );
 
 export default mediaRouter;
