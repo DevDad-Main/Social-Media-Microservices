@@ -1,5 +1,6 @@
 import { v2 as cloudinary } from "cloudinary";
 import { AppError, logger } from "devdad-express-utils";
+import "dotenv/config";
 import streamifier from "streamifier";
 import { Media } from "../models/Media.model.js";
 
@@ -13,7 +14,23 @@ cloudinary.config({
 export const uploadSingleMedia = async (file, userId) => {
   const { originalname, mimetype, buffer } = file;
 
-  const cloudinaryResponse = await uploadMediaBufferToCloudinary(buffer);
+  let cloudinaryResponse;
+  let retries = 3;
+  
+  while (retries > 0) {
+    try {
+      cloudinaryResponse = await uploadMediaBufferToCloudinary(buffer);
+      break;
+    } catch (error) {
+      retries--;
+      if (retries === 0) {
+        logger.error("Cloudinary upload failed after 3 retries: ", error);
+        throw new AppError("Cloudinary upload failed", 500);
+      }
+      logger.warn(`Cloudinary upload failed, retrying... (${3 - retries}/3)`);
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+  }
 
   if (!cloudinaryResponse.secure_url) {
     logger.error("Cloudinary upload failed");
@@ -54,6 +71,7 @@ export const uploadMediaBufferToCloudinary = async (
       {
         folder: `SocialMediaMicroservice`,
         resource_type: resourceType,
+        timeout: 60000,
       },
       (error, result) => {
         if (result) {
