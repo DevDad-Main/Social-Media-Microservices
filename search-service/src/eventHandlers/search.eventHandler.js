@@ -89,8 +89,33 @@ export async function handleUserCreated(event) {
       `New User Search created: User:${userId}-UserSearch:${newUserSearch._id.toString()}`,
     );
   } catch (error) {
-    logger.error("Error handling post creation event", { error });
+    logger.error("Error handling user creation event", { error });
     throw new AppError("Error handling user creation event", 500);
+  }
+}
+//#endregion
+
+//#region Handle User Updated Event
+export async function handleUserUpdated(event) {
+  const { userId, searchTerm } = event;
+
+  try {
+    const userSearchToUpdate = await UserSearch.findOneAndUpdate(
+      { userId },
+      { searchTerm },
+    );
+
+    if (!userSearchToUpdate) {
+      logger.warn(`Failed to update searchable user`);
+      throw new AppError("Failed to create new searchable user", 500);
+    }
+
+    logger.info(
+      `Updated User Search: User:${userId}-UserSearch:${userSearchToUpdate._id.toString()}`,
+    );
+  } catch (error) {
+    logger.error("Error handling user updated event", { error });
+    throw new AppError("Error handling user updated event", 500);
   }
 }
 //#endregion

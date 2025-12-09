@@ -306,6 +306,11 @@ export const updateUserProfile = catchAsync(async (req, res, next) => {
 
     await userToUpdate.save();
 
+    await publishRabbitMQEvent("user.updated", {
+      userId: userToUpdate._id.toString(),
+      searchTerm: userToUpdate.username,
+    });
+
     await clearRedisUserCache(req, userToUpdate._id);
     await clearRedisUsersSearchCache(req);
 
