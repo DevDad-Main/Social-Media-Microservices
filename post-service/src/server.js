@@ -8,6 +8,7 @@ await connectDB();
 (async () => {
   try {
     await initializeRabbitMQ();
+
     app.listen(process.env.PORT || 3002, () => {
       logger.info(
         `Post Service is running on port ${process.env.PORT || 3002}`,
@@ -15,7 +16,7 @@ await connectDB();
       logger.info("Post Service DB Status ->", getDBStatus());
     });
   } catch (error) {
-    logger.error("Failed to connect to servers... ", error);
+    logger.error("Failed to connect to servers... ", { error });
     process.exit(1);
   }
 })();

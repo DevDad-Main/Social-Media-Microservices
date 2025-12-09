@@ -10,7 +10,11 @@ import { RefreshToken } from "../models/RefreshToken.model.js";
 import { validationResult } from "express-validator";
 import { fetchMediaByUserId } from "../utils/fetchUrlsFromMediaService.utils.js";
 import { isValidObjectId } from "mongoose";
-import { clearRedisUserCache } from "../utils/cleanRedisCache.utils.js";
+import {
+  clearRedisUserCache,
+  clearRedisUsersSearchCache,
+} from "../utils/cleanRedisCache.utils.js";
+import { publishEvent as publishRabbitMQEvent } from "../utils/rabbitmq.utils.js";
 
 //#region Constants
 const HTTP_OPTIONS = {
@@ -45,6 +49,14 @@ export const registerUser = catchAsync(async (req, res, next) => {
   });
 
   await user.save(); // NOTE: Trigger pre-save hash password hook
+
+  await publishRabbitMQEvent("user.created", {
+    userId: user._id.toString(),
+    searchTerm: user.username,
+    userCreatedAt: user.createdAt,
+  });
+
+  await clearRedisUsersSearchCache(req);
 
   return sendSuccess(res, user, "User Registered Successfully", 201);
 });
@@ -295,6 +307,7 @@ export const updateUserProfile = catchAsync(async (req, res, next) => {
     await userToUpdate.save();
 
     await clearRedisUserCache(req, userToUpdate._id);
+    await clearRedisUsersSearchCache(req);
 
     return sendSuccess(
       res,

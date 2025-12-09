@@ -19,6 +19,7 @@
     "vitest": "^4.0.15"
   },
   "dependencies": {
+    "amqplib": "^0.10.9",
     "axios": "^1.13.2",
     "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",

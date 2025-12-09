@@ -21,8 +21,10 @@ const redisClient = new Redis(process.env.REDIS_URL, {
   },
 });
 
-redisClient.on("connect", (info) => logger.info("✅ Redis connected", info));
-redisClient.on("error", (err) => logger.error("❌ Redis error:", err));
+redisClient.on("connect", (info) =>
+  logger.info("✅ Redis connected", { info }),
+);
+redisClient.on("error", (err) => logger.error("❌ Redis error:", { err }));
 
 const expressEndpointRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -42,10 +44,7 @@ const proxyOptions = {
     return req.originalUrl.replace(/^\/v1/, "/api");
   },
   proxyErrorHandler: (err, res, next) => {
-    logger.error(
-      `Proxy Error: `,
-      err.message || err || "Something Went Wrong With Our Proxies",
-    );
+    logger.error(`Proxy Error: `, { err });
     return sendError(
       res,
       err.message || err || "Something Went Wrong With Our Proxies",
@@ -166,9 +165,7 @@ app.use(
     // NOTE: Allows us to overwrite certain Request Options before proxying
     proxyReqOptDecorator: (proxyReqOptions, srcReq) => {
       proxyReqOptions.headers["x-user-id"] = srcReq.user._id;
-      if (!srcReq.headers["content-type"].startsWith("multipart/form-data")) {
-        proxyReqOptions.headers["content-type"] = "application/json";
-      }
+      proxyReqOptions.headers["content-type"] = "application/json";
       return proxyReqOptions;
     },
     userResDecorator: (proxyRes, proxyResData, userReq, userRes) => {

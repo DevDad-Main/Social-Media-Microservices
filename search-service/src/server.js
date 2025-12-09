@@ -8,6 +8,7 @@ import {
 import {
   handlePostCreated,
   handlePostDeleted,
+  handleUserCreated,
 } from "./eventHandlers/search.eventHandler.js";
 
 await connectDB();
@@ -18,6 +19,8 @@ await connectDB();
 
     await consumeRabbitMQEvent("post.created", handlePostCreated);
     await consumeRabbitMQEvent("post.deleted", handlePostDeleted);
+
+    await consumeRabbitMQEvent("user.created", handleUserCreated);
 
     app.listen(process.env.PORT || 3004, () => {
       logger.info(

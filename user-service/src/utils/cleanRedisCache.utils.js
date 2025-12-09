@@ -8,8 +8,8 @@ export async function clearRedisUserCache(req, id) {
   }
 }
 
-export async function clearRedisPostsSearchCache(req) {
-  const keys = await req.redisClient.keys("posts-search:*");
+export async function clearRedisUsersSearchCache(req) {
+  const keys = await req.redisClient.keys("users-search:*");
 
   if (Array.isArray(keys) && keys.length > 0) {
     await req.redisClient.unlink(keys);

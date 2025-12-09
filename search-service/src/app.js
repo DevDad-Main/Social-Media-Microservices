@@ -6,7 +6,8 @@ import rateLimit from "express-rate-limit";
 import Redis from "ioredis";
 import RedisStore from "rate-limit-redis";
 import cors from "cors";
-import postSearchRouter from "./routes/postSearch.routes.js";
+import searchRouter from "./routes/search.routes.js";
+import cookieParser from "cookie-parser";
 
 //#region Constants
 const app = express();
@@ -38,6 +39,7 @@ app.use(helmet());
 app.use(cors());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+app.use(cookieParser());
 
 app.use((req, res, next) => {
   rateLimiter
@@ -52,6 +54,7 @@ app.use((req, res, next) => {
 
 //#region Route Entry Points
 app.use("/api/search/posts", expressEndpointRateLimiter);
+app.use("/api/search/discover", expressEndpointRateLimiter);
 
 app.use(
   "/api/search",
@@ -59,7 +62,7 @@ app.use(
     req.redisClient = redisClient;
     next();
   },
-  postSearchRouter,
+  searchRouter,
 );
 //#endregion
 
