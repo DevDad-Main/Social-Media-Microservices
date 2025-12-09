@@ -15,66 +15,71 @@ export const uploadMedia = catchAsync(async (req, res, next) => {
   const profilePhoto = req.files?.profile_photo?.[0];
   const coverPhoto = req.files?.cover_photo?.[0];
 
-  if (!profilePhoto) {
-    return sendError(res, "Profile picture is required", 400);
-  }
-
-  if (!coverPhoto) {
-    return sendError(res, "Cover photo is required", 400);
-  }
-
-  if (!profile_photo_type || !cover_photo_type) {
-    logger.warn(
-      `Missing Profile Type or Cover Type.. ${profile_photo_type}, ${cover_photo_type}`,
-    );
+  if (!profilePhoto && !coverPhoto) {
+    logger.warn("At least one photo (profile or cover) is required");
     return sendError(
       res,
-      `Missing Profile Type or Cover Type.. ${profile_photo_type}, ${cover_photo_type}`,
+      "At least one photo (profile or cover) is required",
       400,
     );
   }
 
-  if (profile_photo_type !== "profile") {
+  if (profilePhoto && !profile_photo_type) {
+    logger.warn("Profile photo provided but missing Profile Type");
+    return sendError(
+      res,
+      "Profile photo provided but missing Profile Type",
+      400,
+    );
+  }
+
+  if (coverPhoto && !cover_photo_type) {
+    logger.warn("Cover photo provided but missing Cover Type");
+    return sendError(res, "Cover photo provided but missing Cover Type", 400);
+  }
+
+  if (profilePhoto && profile_photo_type !== "profile") {
     logger.warn("Profile Type is not equal to 'profile'");
     return sendError(res, "Profile Type is not equal to 'profile'", 400);
   }
 
-  if (cover_photo_type !== "cover") {
+  if (coverPhoto && cover_photo_type !== "cover") {
     logger.warn("Cover Type is not equal to 'cover'");
     return sendError(res, "Cover Type is not equal to 'cover'", 400);
   }
 
   try {
-    const profileMedia = await uploadSingleMedia(
-      profilePhoto,
-      req.user._id,
-      profile_photo_type,
-    );
-
-    const coverMedia = await uploadSingleMedia(
-      coverPhoto,
-      req.user._id,
-      cover_photo_type,
-    );
-
-    return sendSuccess(
-      res,
-      {
-        profile: {
-          mediaId: profileMedia._id,
-          url: profileMedia.url,
-        },
-        cover: {
-          mediaId: coverMedia._id,
-          url: coverMedia.url,
-        },
-        user: {
-          _id: req.user._id,
-        },
+    const result = {
+      user: {
+        _id: req.user._id,
       },
-      "Media uploaded successfully",
-      201,
-    );
+    };
+
+    if (profilePhoto) {
+      const profileMedia = await uploadSingleMedia(
+        profilePhoto,
+        req.user._id,
+        profile_photo_type,
+      );
+      result.profile = {
+        mediaId: profileMedia._id,
+        url: profileMedia.url,
+      };
+    }
+
+    if (coverPhoto) {
+      const coverMedia = await uploadSingleMedia(
+        coverPhoto,
+        req.user._id,
+        cover_photo_type,
+      );
+      result.cover = {
+        mediaId: coverMedia._id,
+        url: coverMedia.url,
+      };
+    }
+
+    return sendSuccess(res, result, "Media uploaded successfully", 201);
   } catch (error) {
     logger.error("Upload error:", error.message);
     return sendError(res, error.message, 500);
