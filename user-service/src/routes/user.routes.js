@@ -4,7 +4,6 @@ import {
   loginUser,
   generateRefreshToken,
   logoutUser,
-  getUserProfile,
 } from "../controllers/user.controller.js";
 import {
   loginUserValidation,

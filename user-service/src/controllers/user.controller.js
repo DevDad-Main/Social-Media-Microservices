@@ -37,7 +37,7 @@ export const registerUser = catchAsync(async (req, res, next) => {
   }
 
   user = new User({
-    full_name: `${firstName === " " ? "First" : firstName} ${lastName === " " ? "Last" : lastName}`,
+    fullName: `${firstName === " " ? "First" : firstName} ${lastName === " " ? "Last" : lastName}`,
     email,
     username,
     password,
@@ -241,5 +241,65 @@ export const getUserProfile = catchAsync(async (req, res, next) => {
   ); // 5 minutes TTL
 
   return sendSuccess(res, enrichedProfile, "User Profile Fetched", 200);
+});
+//#endregion
+
+//#region Update User Profile Details
+export const updateUserProfile = catchAsync(async (req, res, next) => {
+  let { username, bio, location, fullName } = req.body;
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    logger.warn("Registration Validation Error: ", errors.array());
+    return sendError(res, "Registration Validation Error", 400, errors.array());
+  }
+  if (!req.user) {
+    logger.warn("User Not Found");
+    return sendError(res, "User Not Found", 404);
+  }
+
+  if (!isValidObjectId(req.user._id)) {
+    logger.warn("ID is not a valid MongoDB ObjectId");
+    return sendError(res, "ID is not a valid MongoDB ObjectId", 400);
+  }
+
+  try {
+    const userToUpdate = await User.findById(req.user?._id);
+
+    if (!userToUpdate) {
+      logger.warn("User Not Found");
+      return sendError(res, "User Not Found", 404);
+    }
+
+    !username && (username = userToUpdate.username);
+    !bio && (bio = userToUpdate.bio);
+    !location && (location = userToUpdate.location);
+    !fullName && (fullName = userToUpdate.fullName);
+
+    if (userToUpdate.username !== username) {
+      const usernameExists = await User.findOne({ username });
+
+      if (usernameExists) {
+        username = userToUpdate.username;
+      }
+    }
+
+    userToUpdate.username = username;
+    userToUpdate.bio = bio;
+    userToUpdate.location = location;
+    userToUpdate.fullName = fullName;
+
+    await userToUpdate.save();
+
+    return sendSuccess(
+      res,
+      userToUpdate,
+      "User Profile Updated Successfully",
+      200,
+    );
+  } catch (error) {
+    logger.error("Failed to update user profile: ", { error });
+    return sendError(res, error.message, error.status || 500);
+  }
 });
 //#endregion

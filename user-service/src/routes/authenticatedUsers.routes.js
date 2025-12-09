@@ -1,6 +1,10 @@
 import { Router } from "express";
-import { getUserProfile } from "../controllers/user.controller.js";
+import {
+  getUserProfile,
+  updateUserProfile,
+} from "../controllers/user.controller.js";
 import { authenticateUserMiddleware } from "../middleware/auth.middleware.js";
+import { updateUserValidation } from "../utils/validation.utils.js";
 
 const authenticatedUsersRouter = Router();
 
@@ -9,6 +13,13 @@ authenticatedUsersRouter.get(
   "/profile/:id",
   authenticateUserMiddleware,
   getUserProfile,
+);
+
+authenticatedUsersRouter.post(
+  "/update-user",
+  authenticateUserMiddleware,
+  updateUserValidation,
+  updateUserProfile,
 );
 
 export default authenticatedUsersRouter;

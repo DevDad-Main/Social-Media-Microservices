@@ -71,3 +71,35 @@ export const loginUserValidation = [
   body("password").notEmpty().withMessage("Password can't be empty!"),
 ];
 //#endregion
+
+//#region Update User Details Validation
+export const updateUserValidation = [
+  body("fullName")
+    .notEmpty()
+    .withMessage("Full name is required and cannot be empty!")
+    .trim(),
+  body("username")
+    .notEmpty()
+    .withMessage("Username is required")
+    .trim()
+    .bail()
+    .isLength({ min: 5, max: 12 })
+    .withMessage("Username must be between 5 and 12 characters.")
+    .custom(async (value, { req }) => {
+      const loggedInUser = await User.findById(req.user?._id);
+      if (loggedInUser.username === value) {
+        return new AppError(
+          "Username already exists, Please choose another.",
+          400,
+        );
+      }
+      const user = await User.findOne({ username: value });
+      if (user) {
+        return new AppError(
+          "Username already exists, Please choose another.",
+          400,
+        );
+      }
+    }),
+];
+//#endregion

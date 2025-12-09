@@ -52,6 +52,69 @@ export const uploadSingleMedia = async (file, userId, type) => {
 };
 //#endregion
 
+//#region Upload Single Media File And Delete Original
+export const uploadUpdatedUserMediaAndDeleteOriginal = async (
+  original,
+  file,
+  userId,
+  type,
+) => {
+  const { originalname, mimetype, buffer } = file;
+
+  let cloudinaryResponse;
+  let retries = 3;
+
+  while (retries > 0) {
+    try {
+      cloudinaryResponse = await uploadMediaBufferToCloudinary(buffer);
+      break;
+    } catch (error) {
+      retries--;
+      if (retries === 0) {
+        logger.error("Cloudinary upload failed after 3 retries: ", error);
+        throw new AppError("Cloudinary upload failed", 500);
+      }
+      logger.warn(`Cloudinary upload failed, retrying... (${3 - retries}/3)`);
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+  }
+
+  if (!cloudinaryResponse.secure_url) {
+    logger.error("Cloudinary upload failed");
+    throw new AppError("Cloudinary upload failed", 500);
+  }
+
+  try {
+    logger.info("Attempting to delete image with publicId:", original.publicId);
+    const result = await deleteImageFromCloudinary(original);
+    logger.info("Cloudinary deletion result:", result);
+    if (result.result !== "ok") {
+      logger.error("Failed to delete original image from Cloudinary: ", result);
+      throw new AppError(
+        "Failed to delete original image from Cloudinary",
+        500,
+      );
+    }
+  } catch (error) {
+    logger.error("Failed to delete original image from Cloudinary: ", error);
+    throw new AppError("Failed to delete original image from Cloudinary", 500);
+  }
+
+  const created = await Media.create({
+    publicId: cloudinaryResponse.public_id,
+    originalFilename: originalname,
+    mimeType: mimetype,
+    url: cloudinaryResponse.secure_url,
+    user: userId,
+    type,
+  });
+
+  if (!created) throw new AppError("Failed to create media", 500);
+
+  return created;
+};
+//#endregion
+
 //#region Upload File To Cloudinary
 /**
  * Uploads the specified file using Buffers and Streams.
