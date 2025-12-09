@@ -85,7 +85,7 @@ export const uploadUpdatedUserMediaAndDeleteOriginal = async (
   }
 
   try {
-    logger.info("Attempting to delete image with publicId:", original.publicId);
+    logger.info("Attempting to delete image with publicId:", original);
     const result = await deleteImageFromCloudinary(original);
     logger.info("Cloudinary deletion result:", result);
     if (result.result !== "ok") {
@@ -97,6 +97,23 @@ export const uploadUpdatedUserMediaAndDeleteOriginal = async (
     }
   } catch (error) {
     logger.error("Failed to delete original image from Cloudinary: ", error);
+    throw new AppError("Failed to delete original image from Cloudinary", 500);
+  }
+
+  try {
+    const deleteOriginalMediaFromDB = await Media.deleteOne({
+      user: userId,
+      publicId: original,
+    });
+    if (!deleteOriginalMediaFromDB)
+      throw new AppError(
+        `Failed to delete original media from DB... ${deleteOriginalMediaFromDB}`,
+        500,
+      );
+  } catch (error) {
+    logger.error("Failed to delete original image from Cloudinary: ", {
+      error,
+    });
     throw new AppError("Failed to delete original image from Cloudinary", 500);
   }
 

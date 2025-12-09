@@ -10,6 +10,7 @@ import { RefreshToken } from "../models/RefreshToken.model.js";
 import { validationResult } from "express-validator";
 import { fetchMediaByUserId } from "../utils/fetchUrlsFromMediaService.utils.js";
 import { isValidObjectId } from "mongoose";
+import { clearRedisUserCache } from "../utils/cleanRedisCache.utils.js";
 
 //#region Constants
 const HTTP_OPTIONS = {
@@ -164,6 +165,8 @@ export const logoutUser = catchAsync(async (req, res, next) => {
   //   return sendError(res, "Refresh Token Failed To Delete", 404);
   // }
 
+  await clearRedisUserCache(req, req.user._id);
+
   res
     .clearCookie("accessToken", HTTP_OPTIONS)
     .clearCookie("refreshToken", HTTP_OPTIONS);
@@ -290,6 +293,8 @@ export const updateUserProfile = catchAsync(async (req, res, next) => {
     userToUpdate.fullName = fullName;
 
     await userToUpdate.save();
+
+    await clearRedisUserCache(req, userToUpdate._id);
 
     return sendSuccess(
       res,

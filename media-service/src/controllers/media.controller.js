@@ -10,6 +10,10 @@ import {
 } from "../utils/cloudinary.utils.js";
 import { Media } from "../models/Media.model.js";
 import { isValidObjectId } from "mongoose";
+import {
+  clearRedisUserMediaCache,
+  clearRedisUserProfileCache,
+} from "../utils/cleanRedisCache.utils.js";
 
 const fetchMediaForAUserAndFindAProperty = async (req, mediaType) => {
   const userMedia = await Media.find({ user: req.user._id });
@@ -95,6 +99,10 @@ export const uploadMedia = catchAsync(async (req, res, next) => {
         url: coverMedia.url,
       };
     }
+
+    // Clear relevant caches when user media is uploaded
+    await clearRedisUserMediaCache(req, req.user._id);
+    await clearRedisUserProfileCache(req, req.user._id);
 
     return sendSuccess(res, result, "Media uploaded successfully", 201);
   } catch (error) {
@@ -214,6 +222,10 @@ export const uploadUpdatedUserMedia = catchAsync(async (req, res, next) => {
         url: originalCoverPhoto.url,
       };
     }
+
+    // Clear relevant caches when user media is updated
+    await clearRedisUserMediaCache(req, req.user._id);
+    await clearRedisUserProfileCache(req, req.user._id);
 
     return sendSuccess(res, result, "Media uploaded successfully", 201);
   } catch (error) {
