@@ -37,6 +37,7 @@ const expressEndpointRateLimiter = rateLimit({
 app.use(helmet());
 //TODO: Add CORS custom configuration
 app.use(cors());
+app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 
@@ -52,7 +53,9 @@ app.use((req, res, next) => {
 //#endregion
 
 //#region Route Entry Points
-app.use("/api/media/upload-media/user-register", expressEndpointRateLimiter);
+app.use("/api/media/upload-user-media", expressEndpointRateLimiter);
+app.use("/api/media/post-media-files", expressEndpointRateLimiter);
+app.use("/api/media/fetch-user-media", expressEndpointRateLimiter);
 
 app.use(
   "/api/media",

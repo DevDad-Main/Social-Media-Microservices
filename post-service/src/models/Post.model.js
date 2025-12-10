@@ -2,15 +2,14 @@ import mongoose from "mongoose";
 
 const postSchema = new mongoose.Schema(
   {
-    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    user: { type: mongoose.Schema.Types.ObjectId, required: true },
     content: { type: String },
-    mediaIds: [{ type: String }],
     postType: {
       type: String,
       enum: ["text", "image", "text_with_image"],
       required: true,
     },
-    likesCount: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    likesCount: [{ type: mongoose.Schema.Types.ObjectId }],
   },
   {
     timestamps: true,

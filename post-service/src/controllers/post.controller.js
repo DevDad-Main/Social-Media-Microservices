@@ -13,19 +13,25 @@ import {
   clearRedisPostsSearchCache,
 } from "../utils/cleanRedisCache.utils.js";
 import { publishEvent as publishRabbitMQEvent } from "../utils/rabbitmq.utils.js";
+import { postMediaFilesToMediaServiceForProcessing } from "../utils/postMediaFiles.utils.js";
 
 //#region Create Post
 export const createPost = catchAsync(async (req, res, next) => {
-  const { content, postType, mediaIds } = req.body;
-  const { error } = validateNewPostCreation(req.body);
+  const { content, postType } = req.body;
+  // const { error } = validateNewPostCreation(req.body);
+  const images = req.files?.images || [];
+  console.log("DEBUG: req.files =", req.files);
+  console.log("DEBUG: images =", images);
 
-  if (error) {
-    logger.warn(
-      "New Post Creation Validation Error: ",
-      error.details[0].message,
-    );
-    return sendError(res, error.details[0].message, 400);
-  }
+  // console.log(images);
+
+  // if (error) {
+  //   logger.warn(
+  //     "New Post Creation Validation Error: ",
+  //     error.details[0].message,
+  //   );
+  //   return sendError(res, error.details[0].message, 400);
+  // }
 
   if (!isValidObjectId(req.user._id)) {
     logger.warn(`User ${req.user._id} is not valid`);
@@ -40,7 +46,7 @@ export const createPost = catchAsync(async (req, res, next) => {
   const newelyCreatedPost = await Post.create({
     user: req.user._id,
     content,
-    mediaIds,
+    // mediaIds,
     postType,
   });
 
@@ -55,10 +61,36 @@ export const createPost = catchAsync(async (req, res, next) => {
     searchTerm: newelyCreatedPost.content,
     postCreatedAt: newelyCreatedPost.createdAt,
   });
+
+  let postMediaURLs = [];
+  console.log(
+    "DEBUG: About to check if condition - images.length =",
+    images?.length,
+  );
+  if (images && images.length > 0) {
+    console.log("INSIDE IF BLOCK: Processing images");
+    const mediaResults = await postMediaFilesToMediaServiceForProcessing(
+      newelyCreatedPost._id.toString(),
+      images,
+    );
+
+    logger.info("MEDIA RESULTS: ", mediaResults);
+
+    // console.log(mediaResults);
+
+    // imageUrls = mediaResults.map((media) => media.url);
+    postMediaURLs = mediaResults.data.media.urls;
+  }
+
   await clearRedisPostsCache(req);
   await clearRedisPostsSearchCache(req);
 
-  return sendSuccess(res, newelyCreatedPost, "Post created successfully", 201);
+  return sendSuccess(
+    res,
+    { newelyCreatedPost, postMediaURLs },
+    "Post created successfully",
+    201,
+  );
 });
 //#endregion
 

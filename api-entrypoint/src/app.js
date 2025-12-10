@@ -117,7 +117,9 @@ app.use(
     ...proxyOptions,
     // NOTE: Allows us to overwrite certain Request Options before proxying
     proxyReqOptDecorator: (proxyReqOptions, srcReq) => {
-      proxyReqOptions.headers["content-type"] = "application/json";
+      if (!srcReq.headers["content-type"].startsWith("multipart/form-data")) {
+        proxyReqOptions.headers["content-type"] = "application/json";
+      }
       proxyReqOptions.headers["x-user-id"] = srcReq.user._id;
       return proxyReqOptions;
     },

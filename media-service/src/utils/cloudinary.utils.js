@@ -2,7 +2,7 @@ import { v2 as cloudinary } from "cloudinary";
 import { AppError, logger } from "devdad-express-utils";
 import "dotenv/config";
 import streamifier from "streamifier";
-import { Media } from "../models/Media.model.js";
+import { PostMedia } from "../models/PostMedia.model.js";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -10,10 +10,8 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-//#region Upload Single Media File
-export const uploadSingleMedia = async (file, userId, type) => {
-  const { originalname, mimetype, buffer } = file;
-
+//#region Upload Image With Retries And Return Secure URL Utility Function
+async function uploadImageWithRetriesAndReturnSecureUrl(buffer) {
   let cloudinaryResponse;
   let retries = 3;
 
@@ -37,6 +35,16 @@ export const uploadSingleMedia = async (file, userId, type) => {
     throw new AppError("Cloudinary upload failed", 500);
   }
 
+  return cloudinaryResponse;
+}
+//#endregion
+
+//#region Upload Single User Media File
+export const uploadSingleMedia = async (file, userId, type) => {
+  const { originalname, mimetype, buffer } = file;
+
+  const cloudinaryResponse = uploadImageWithRetriesAndReturnSecureUrl(buffer);
+
   const created = await Media.create({
     publicId: cloudinaryResponse.public_id,
     originalFilename: originalname,
@@ -44,6 +52,33 @@ export const uploadSingleMedia = async (file, userId, type) => {
     url: cloudinaryResponse.secure_url,
     user: userId,
     type,
+  });
+
+  if (!created) throw new AppError("Failed to create media", 500);
+
+  return created;
+};
+//#endregion
+
+//#region Upload Single Post Media File
+export const uploadPostsMedia = async (files, userId, type) => {
+  // const { originalname, mimetype, buffer } = files;
+
+  const cloudinaryResponseArray = await Promise.all(
+    files.map((file) => uploadImageWithRetriesAndReturnSecureUrl(file.buffer)),
+  );
+  // const cloudinaryResponse = uploadImageWithRetriesAndReturnSecureUrl(buffer);
+
+  const created = await PostMedia.create({
+    publicId: cloudinaryResponseArray.map((response) => response.public_id),
+    originalFilenames: files.map((file) => file.originalname),
+    mimeType: files[0].mimetype,
+    urls: cloudinaryResponseArray.map((response) => response.secure_url),
+    // originalFilename: originalname,
+    // mimeType: mimetype,
+    // url: cloudinaryResponse.secure_url,
+    user: userId,
+    postId: userId, // Using userId as postId since that's what we're passing
   });
 
   if (!created) throw new AppError("Failed to create media", 500);
@@ -61,28 +96,7 @@ export const uploadUpdatedUserMediaAndDeleteOriginal = async (
 ) => {
   const { originalname, mimetype, buffer } = file;
 
-  let cloudinaryResponse;
-  let retries = 3;
-
-  while (retries > 0) {
-    try {
-      cloudinaryResponse = await uploadMediaBufferToCloudinary(buffer);
-      break;
-    } catch (error) {
-      retries--;
-      if (retries === 0) {
-        logger.error("Cloudinary upload failed after 3 retries: ", error);
-        throw new AppError("Cloudinary upload failed", 500);
-      }
-      logger.warn(`Cloudinary upload failed, retrying... (${3 - retries}/3)`);
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-    }
-  }
-
-  if (!cloudinaryResponse.secure_url) {
-    logger.error("Cloudinary upload failed");
-    throw new AppError("Cloudinary upload failed", 500);
-  }
+  const cloudinaryResponse = uploadImageWithRetriesAndReturnSecureUrl(buffer);
 
   try {
     logger.info("Attempting to delete image with publicId:", original);

@@ -6,7 +6,7 @@ const mediaSchema = new mongoose.Schema(
     originalFilename: { type: String, required: true },
     mimeType: { type: String, required: true },
     url: { type: String, required: true },
-    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    user: { type: mongoose.Schema.Types.ObjectId, required: true },
     type: { type: String, enum: ["profile", "cover"] },
   },
   { timestamps: true },

@@ -6,12 +6,17 @@ import {
   getPostById,
   getPosts,
 } from "../controllers/post.controller.js";
+import { upload } from "../utils/multer.utils.js";
 
 const postRouter = Router();
 
 postRouter.use(authenticateUserMiddleware);
 
-postRouter.post("/create-post", createPost);
+postRouter.post(
+  "/create-post",
+  upload.fields([{ name: "images", maxCount: 4 }]),
+  createPost,
+);
 postRouter.get("/get-posts", getPosts);
 postRouter.get("/get-post/:id", getPostById);
 postRouter.delete("/delete-post/:id", deletePostById);
