@@ -16,7 +16,7 @@ postRouter.use(authenticateUserMiddleware);
 
 postRouter.post(
   "/create-post",
-  upload.fields([{ name: "images", maxCount: 4 }]),
+  upload.array("images", 4),
   validateNewPostCreation,
   createPost,
 );

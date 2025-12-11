@@ -77,8 +77,15 @@ export const createPost = catchAsync(async (req, res, next) => {
     postMediaURLs = mediaResults.data.media.urls;
   }
 
-  await clearRedisPostsCache(req);
-  await clearRedisPostsSearchCache(req);
+  try {
+    await Promise.all([
+      clearRedisPostsCache(req),
+      clearRedisPostsSearchCache(req),
+    ]);
+  } catch (error) {
+    logger.error(error?.message || "Failed to clear cache", { error });
+    return sendError(res, error?.message || "Failed to clear cache", 500);
+  }
 
   return sendSuccess(
     res,
@@ -187,7 +194,18 @@ export const getPostById = catchAsync(async (req, res, next) => {
 //#endregion
 
 //#region Update Post
-export const updatePost = catchAsync(async (req, res, next) => {});
+export const updatePost = catchAsync(async (req, res, next) => {
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    const errorMessages = errors.array().map((error) => error.msg);
+    logger.warn("New Post Creation Validation Error: ", errorMessages);
+    return sendError(res, errorMessages.join(", "), 400);
+  }
+
+  const { content, postType } = req.body;
+  const images = req.files?.images || [];
+});
 //#endregion
 
 //#region Delete Post
@@ -222,7 +240,7 @@ export const deletePostById = catchAsync(async (req, res, next) => {
       clearRedisPostsSearchCache(req),
     ]);
   } catch (error) {
-    logger.error(error?.message || error || "Failed to clear cache");
+    logger.error(error?.message || "Failed to clear cache", { error });
     return sendError(res, error?.message || "Failed to clear cache", 500);
   }
 
