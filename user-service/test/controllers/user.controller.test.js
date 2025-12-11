@@ -31,9 +31,11 @@ describe('User Controller Integration Tests', () => {
   describe('POST /api/auth/register', () => {
     it('should register a new user successfully', async () => {
       const userData = {
+        firstName: 'John',
+        lastName: 'Doe',
         username: 'testuser',
         email: 'test@example.com',
-        password: 'password123',
+        password: 'Password123!',
       };
 
       const response = await request(app)
@@ -48,12 +50,15 @@ describe('User Controller Integration Tests', () => {
       // Check user was created
       const user = await User.findOne({ email: userData.email });
       expect(user).toBeTruthy();
+      expect(user.fullName).toBe('John Doe');
       expect(user.username).toBe(userData.username);
     });
 
     it('should return 400 for invalid data', async () => {
       const invalidData = {
-        username: 'ab', // too short
+        firstName: '',
+        lastName: '',
+        username: 'ab',
         email: 'invalid-email',
         password: '123',
       };
@@ -63,17 +68,24 @@ describe('User Controller Integration Tests', () => {
         .send(invalidData)
         .expect(400);
 
-      expect(response.body.message).toContain('username');
+      expect(response.body.message).toBe('Registration Validation Error');
+      expect(response.body.errors.some(error => error.msg.includes('First name'))).toBe(true);
+      expect(response.body.errors.some(error => error.msg.includes('Last name'))).toBe(true);
+      expect(response.body.errors.some(error => error.msg.includes('username'))).toBe(true);
+      expect(response.body.errors.some(error => error.msg.includes('email'))).toBe(true);
+      expect(response.body.errors.some(error => error.msg.includes('password'))).toBe(true);
     });
 
     it('should return 400 for duplicate user', async () => {
       const userData = {
+        firstName: 'John',
+        lastName: 'Doe',
         username: 'testuser',
         email: 'test@example.com',
-        password: 'password123',
+        password: 'Password123!',
       };
 
-      // Register first user
+      // First registration
       await request(app)
         .post('/api/auth/register')
         .send(userData)

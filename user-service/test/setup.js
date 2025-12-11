@@ -1,7 +1,27 @@
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
+import { vi } from 'vitest';
 
 let mongoServer;
+
+// Mock RabbitMQ
+vi.mock('../src/utils/rabbitmq.utils.js', () => ({
+  publishEvent: vi.fn(),
+}));
+
+// Mock cache clearing
+vi.mock('../src/utils/cleanRedisCache.utils.js', () => ({
+  clearRedisUserCache: vi.fn().mockResolvedValue(),
+  clearRedisUsersSearchCache: vi.fn().mockResolvedValue(),
+}));
+
+// Mock media service
+vi.mock('../src/utils/fetchUrlsFromMediaService.utils.js', () => ({
+  fetchMediaByUserId: vi.fn().mockResolvedValue({
+    profilePhoto: { url: 'http://example.com/profile.jpg' },
+    coverPhoto: { url: 'http://example.com/cover.jpg' }
+  }),
+}));
 
 beforeAll(async () => {
   mongoServer = await MongoMemoryServer.create();

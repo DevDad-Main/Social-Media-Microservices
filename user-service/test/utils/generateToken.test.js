@@ -15,6 +15,7 @@ describe('generateTokens', () => {
       username: 'testuser',
       email: 'test@example.com',
       password: 'password123',
+      fullName: 'Test User',
     });
     await user.save();
   });

@@ -8,6 +8,7 @@ describe('User Model', () => {
         username: 'testuser',
         email: 'test@example.com',
         password: 'password123',
+        fullName: 'Test User',
       };
 
       const user = new User(userData);
@@ -15,6 +16,7 @@ describe('User Model', () => {
 
       expect(user.username).toBe(userData.username);
       expect(user.email).toBe(userData.email);
+      expect(user.fullName).toBe(userData.fullName);
       expect(user.password).not.toBe(userData.password); // Should be hashed
     });
 
