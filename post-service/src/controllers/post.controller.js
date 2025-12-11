@@ -1,5 +1,5 @@
 import { isValidObjectId } from "mongoose";
-import { validateNewPostCreation } from "../utils/validation.utils.js";
+import { validationResult } from "express-validator";
 import { Post } from "../models/Post.model.js";
 import {
   logger,
@@ -17,21 +17,17 @@ import { postMediaFilesToMediaServiceForProcessing } from "../utils/postMediaFil
 
 //#region Create Post
 export const createPost = catchAsync(async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const errorMessages = errors.array().map(error => error.msg);
+    logger.warn("New Post Creation Validation Error: ", errorMessages);
+    return sendError(res, errorMessages.join(", "), 400);
+  }
+
   const { content, postType } = req.body;
-  // const { error } = validateNewPostCreation(req.body);
   const images = req.files?.images || [];
   console.log("DEBUG: req.files =", req.files);
   console.log("DEBUG: images =", images);
-
-  // console.log(images);
-
-  // if (error) {
-  //   logger.warn(
-  //     "New Post Creation Validation Error: ",
-  //     error.details[0].message,
-  //   );
-  //   return sendError(res, error.details[0].message, 400);
-  // }
 
   if (!isValidObjectId(req.user._id)) {
     logger.warn(`User ${req.user._id} is not valid`);
@@ -46,7 +42,6 @@ export const createPost = catchAsync(async (req, res, next) => {
   const newelyCreatedPost = await Post.create({
     user: req.user._id,
     content,
-    // mediaIds,
     postType,
   });
 
@@ -76,9 +71,6 @@ export const createPost = catchAsync(async (req, res, next) => {
 
     logger.info("MEDIA RESULTS: ", mediaResults);
 
-    // console.log(mediaResults);
-
-    // imageUrls = mediaResults.map((media) => media.url);
     postMediaURLs = mediaResults.data.media.urls;
   }
 

@@ -1,11 +1,20 @@
-import joi from "joi";
+import { body } from "express-validator";
 
-export const validateNewPostCreation = (data) => {
-  const schema = joi.object({
-    content: joi.string().min(5).max(180).required(),
-    mediaIds: joi.array().max(4),
-    postType: joi.string().valid("text", "image", "text_with_image").required(),
-  });
+export const validateNewPostCreation = [
+  body("content")
+    .isLength({ min: 5, max: 180 })
+    .withMessage("Content must be between 5 and 180 characters")
+    .trim()
+    .escape(),
 
-  return schema.validate(data);
-};
+  body("mediaIds")
+    .optional()
+    .isArray({ max: 4 })
+    .withMessage("Media IDs must be an array with maximum 4 items"),
+
+  body("postType")
+    .isIn(["text", "image", "text_with_image"])
+    .withMessage("Post type must be one of: text, image, text_with_image")
+    .trim()
+    .escape(),
+];

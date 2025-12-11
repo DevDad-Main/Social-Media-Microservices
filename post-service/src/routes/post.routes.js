@@ -7,6 +7,8 @@ import {
   getPosts,
 } from "../controllers/post.controller.js";
 import { upload } from "../utils/multer.utils.js";
+import { validateNewPostCreation } from "../utils/validation.utils.js";
+import { validationResult } from "express-validator";
 
 const postRouter = Router();
 
@@ -15,6 +17,7 @@ postRouter.use(authenticateUserMiddleware);
 postRouter.post(
   "/create-post",
   upload.fields([{ name: "images", maxCount: 4 }]),
+  validateNewPostCreation,
   createPost,
 );
 postRouter.get("/get-posts", getPosts);
