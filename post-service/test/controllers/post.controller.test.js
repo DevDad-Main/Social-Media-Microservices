@@ -14,12 +14,35 @@ import postRouter from "../../src/routes/post.routes.js";
 import { authenticateUserMiddleware } from "../../src/middleware/auth.middleware.js";
 import mongoose from "mongoose";
 
-// Mock the auth middleware to set req.user
+// Mock auth middleware to set req.user
+const mockUserId = new mongoose.Types.ObjectId();
 vi.mock("../../src/middleware/auth.middleware.js", () => ({
   authenticateUserMiddleware: vi.fn((req, res, next) => {
-    req.user = { _id: new mongoose.Types.ObjectId() }; // Mock user
+    req.user = { _id: mockUserId }; // Mock user
     next();
   }),
+}));
+
+// Mock external services
+vi.mock("../../src/utils/postServiceAxiosRequests.utils.js", () => ({
+  postMediaFilesToMediaServiceForProcessing: vi.fn().mockResolvedValue({
+    data: { media: { urls: ["image1", "image2", "image3"] } }
+  }),
+  getPostMediaFilesFromMediaService: vi.fn().mockResolvedValue({
+    urls: ["media1.jpg", "media2.jpg"]
+  }),
+}));
+
+// Mock RabbitMQ
+vi.mock("../../src/utils/rabbitmq.utils.js", () => ({
+  publishEvent: vi.fn(),
+}));
+
+// Mock cache clearing
+vi.mock("../../src/utils/cleanRedisCache.utils.js", () => ({
+  clearRedisPostCache: vi.fn().mockResolvedValue(),
+  clearRedisPostsCache: vi.fn().mockResolvedValue(),
+  clearRedisPostsSearchCache: vi.fn().mockResolvedValue(),
 }));
 
 describe("Post Controller Integration Tests", () => {
@@ -57,17 +80,14 @@ describe("Post Controller Integration Tests", () => {
         .expect(201);
 
       expect(response.body.message).toBe("Post created successfully");
-      expect(response.body.data).toHaveProperty("_id");
-      expect(response.body.data.content).toBe(postData.content);
-      expect(response.body.data.postType).toBe(postData.postType);
-      expect(response.body.data.imageUrls).toEqual([
-        "image1",
-        "image2",
-        "image3",
-      ]);
+      expect(response.body.data).toHaveProperty("newelyCreatedPost");
+      expect(response.body.data).toHaveProperty("postMediaURLs");
+      expect(response.body.data.newelyCreatedPost.content).toBe(postData.content);
+      expect(response.body.data.newelyCreatedPost.postType).toBe(postData.postType);
+      expect(response.body.data.postMediaURLs).toEqual([]); // No files uploaded in test
 
       // Verify in DB
-      const post = await Post.findById(response.body.data._id);
+      const post = await Post.findById(response.body.data.newelyCreatedPost._id);
       expect(post).toBeTruthy();
       expect(post.content).toBe(postData.content);
     });
@@ -83,7 +103,7 @@ describe("Post Controller Integration Tests", () => {
         .send(invalidData)
         .expect(400);
 
-      expect(response.body.message).toContain("postType");
+      expect(response.body.message).toContain("Post type must be one of");
     });
 
     it("should return 400 for invalid postType", async () => {
@@ -97,7 +117,7 @@ describe("Post Controller Integration Tests", () => {
         .send(invalidData)
         .expect(400);
 
-      expect(response.body.message).toContain("postType");
+      expect(response.body.message).toContain("Post type must be one of");
     });
   });
 
@@ -106,17 +126,17 @@ describe("Post Controller Integration Tests", () => {
       // Create some test posts
       await Post.create([
         {
-          user: new mongoose.Types.ObjectId(),
+          user: mockUserId,
           content: "Post 1",
           postType: "text",
         },
         {
-          user: new mongoose.Types.ObjectId(),
+          user: mockUserId,
           content: "Post 2",
           postType: "image",
         },
         {
-          user: new mongoose.Types.ObjectId(),
+          user: mockUserId,
           content: "Post 3",
           postType: "text_with_image",
         },
@@ -161,9 +181,9 @@ describe("Post Controller Integration Tests", () => {
     let createdPost;
 
     beforeEach(async () => {
-      // Create test post
+      // Create test post with same user ID as mock auth
       createdPost = await Post.create({
-        user: new mongoose.Types.ObjectId(),
+        user: mockUserId,
         content: "Post 1",
         postType: "text",
       });
@@ -175,8 +195,8 @@ describe("Post Controller Integration Tests", () => {
         .expect(200);
 
       expect(response.body.message).toBe("Post retrieved successfully");
-      console.log(response.body);
       expect(response.body.data._id).toBe(String(createdPost._id));
+      expect(response.body.data).toHaveProperty("media");
     });
 
     it("should return an error if post id is not valid", async () => {
@@ -202,19 +222,25 @@ describe("Post Controller Integration Tests", () => {
     let createdPost;
 
     beforeEach(async () => {
-      // Create test post
+      // Create test post with same user ID as mock auth
       createdPost = await Post.create({
-        user: new mongoose.Types.ObjectId(),
+        user: mockUserId,
         content: "Post 1",
         postType: "text",
       });
     });
 
-    it("should retrieve post by id successfully", async () => {
+    it("should delete post by id successfully", async () => {
       const response = await request(app)
         .delete(`/api/posts/delete-post/${createdPost._id}`)
         .expect(200);
-      console.log(response.body);
+
+      expect(response.body.message).toBe("Post deleted successfully");
+      expect(response.body.data).toEqual({});
+
+      // Verify post is deleted from DB
+      const deletedPost = await Post.findById(createdPost._id);
+      expect(deletedPost).toBeNull();
     });
 
     it("should return an error if post id is not valid", async () => {
