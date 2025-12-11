@@ -13,13 +13,16 @@ import {
   clearRedisPostsSearchCache,
 } from "../utils/cleanRedisCache.utils.js";
 import { publishEvent as publishRabbitMQEvent } from "../utils/rabbitmq.utils.js";
-import { postMediaFilesToMediaServiceForProcessing } from "../utils/postMediaFiles.utils.js";
+import {
+  postMediaFilesToMediaServiceForProcessing,
+  getPostMediaFilesFromMediaService,
+} from "../utils/postServiceAxiosRequests.utils.js";
 
 //#region Create Post
 export const createPost = catchAsync(async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    const errorMessages = errors.array().map(error => error.msg);
+    const errorMessages = errors.array().map((error) => error.msg);
     logger.warn("New Post Creation Validation Error: ", errorMessages);
     return sendError(res, errorMessages.join(", "), 400);
   }
@@ -140,7 +143,7 @@ export const getPostById = catchAsync(async (req, res, next) => {
     return sendSuccess(
       res,
       JSON.parse(cachedPost),
-      "Posts retrieved successfully",
+      "Posts retrieved successfully (cached)",
       200,
     );
   }
@@ -152,10 +155,34 @@ export const getPostById = catchAsync(async (req, res, next) => {
     return sendError(res, "Post not found", 404);
   }
 
-  // NOTE: We cache the result for 1 hour as a single post is not expected to change often
-  await req.redisClient.set(cacheKey, JSON.stringify(post), "EX", 3600);
+  let enrichedPost = {};
+  try {
+    const postMediaFiles = await getPostMediaFilesFromMediaService(id);
 
-  return sendSuccess(res, post, "Post retrieved successfully", 200);
+    if (!postMediaFiles) {
+      logger.warn(`Post Media Files not found`);
+      return sendError(res, "Post Media Files not found", 404);
+    }
+
+    console.log("DEBUG: postMediaFiles = ", postMediaFiles);
+
+    enrichedPost = {
+      ...post.toObject(),
+      media: postMediaFiles,
+    };
+  } catch (error) {
+    logger.error("Failed to fetch pos media files:", { error });
+    return sendError(
+      res,
+      error.message || "Failed to fetch post media files",
+      500,
+    );
+  }
+
+  // NOTE: We cache the result for 1 hour as a single post is not expected to change often
+  await req.redisClient.set(cacheKey, JSON.stringify(enrichedPost), "EX", 3600);
+
+  return sendSuccess(res, enrichedPost, "Post retrieved successfully", 200);
 });
 //#endregion
 

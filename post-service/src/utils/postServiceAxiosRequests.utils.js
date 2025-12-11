@@ -5,6 +5,7 @@ import { AppError, logger } from "devdad-express-utils";
 const MEDIA_SERVICE_URL =
   process.env.MEDIA_SERVICE_URL || "http://media-service:3003";
 
+//#region Post Media Files to Media Service
 export const postMediaFilesToMediaServiceForProcessing = async (
   postId,
   files,
@@ -47,3 +48,23 @@ export const postMediaFilesToMediaServiceForProcessing = async (
 
   return res.data;
 };
+//#endregion
+
+//#region Get Post Media Files from Media Service
+export const getPostMediaFilesFromMediaService = async (postId) => {
+  if (!postId || typeof postId !== "string") {
+    logger.warn("Post Id is not valid");
+    throw new AppError("Post Id is not valid", 400);
+  }
+
+  const res = await axios.get(
+    `${MEDIA_SERVICE_URL}/api/media/fetch-post-media/${postId}`,
+  );
+
+  console.log(
+    "DEBUG: media inside of Get Post Media Function URLS = ",
+    res.data.data.urls,
+  );
+  return res.data.data.urls;
+};
+//#endregion

@@ -6,6 +6,7 @@ import {
   fetchUserMedia,
   uploadUpdatedUserProfileMedia,
   uploadPostMedia,
+  fetchPostMedia,
 } from "../controllers/media.controller.js";
 
 const mediaRouter = Router();
@@ -38,5 +39,6 @@ mediaRouter.post(
   uploadPostMedia,
 );
 mediaRouter.get("/fetch-user-media/:userId", fetchUserMedia);
+mediaRouter.get("/fetch-post-media/:postId", fetchPostMedia);
 
 export default mediaRouter;

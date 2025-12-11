@@ -11,6 +11,7 @@ import {
   uploadUpdatedUserMediaAndDeleteOriginal,
 } from "../utils/cloudinary.utils.js";
 import { Media } from "../models/Media.model.js";
+import { PostMedia } from "../models/PostMedia.model.js";
 import { isValidObjectId } from "mongoose";
 import {
   clearRedisPostsCache,
@@ -317,5 +318,39 @@ export const uploadPostMedia = catchAsync(async (req, res, next) => {
     logger.error("Upload error:", error.message);
     return sendError(res, error.message, 500);
   }
+});
+//#endregion
+
+//#region Fetch Post Media
+export const fetchPostMedia = catchAsync(async (req, res, next) => {
+  const { postId } = req.params;
+
+  if (!postId) {
+    logger.warn("User Id Not Found");
+    return sendError(res, "User Id Not Found", 400);
+  }
+
+  if (!isValidObjectId(postId)) {
+    logger.warn(`ID: ${postId} is not a valid MongoDB ObjectId`);
+    return sendError(res, `ID: ${postId} is not a valid MongoDB ObjectId`, 400);
+  }
+
+  const media = await PostMedia.findOne({ postId });
+
+  if (!media) {
+    logger.warn("No Post Media Found", 404);
+    return sendError(res, "No Post Media Found", 404);
+  }
+
+  console.log("DEBUG: media = ", media);
+
+  //TODO: Add caching
+
+  return sendSuccess(
+    res,
+    { urls: media.urls || [] },
+    "Media Fetched Successfully",
+    200,
+  );
 });
 //#endregion
