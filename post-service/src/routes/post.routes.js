@@ -5,10 +5,10 @@ import {
   deletePostById,
   getPostById,
   getPosts,
+  togglePostLike,
 } from "../controllers/post.controller.js";
 import { upload } from "../utils/multer.utils.js";
 import { validateNewPostCreation } from "../utils/validation.utils.js";
-import { validationResult } from "express-validator";
 
 const postRouter = Router();
 
@@ -22,6 +22,7 @@ postRouter.post(
 );
 postRouter.get("/get-posts", getPosts);
 postRouter.get("/get-post/:id", getPostById);
+postRouter.post("/toggle-post-like/:postId", togglePostLike);
 postRouter.delete("/delete-post/:id", deletePostById);
 
 export default postRouter;

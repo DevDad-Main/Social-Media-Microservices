@@ -37,11 +37,6 @@ export const createPost = catchAsync(async (req, res, next) => {
     return sendError(res, "User is not valid", 400);
   }
 
-  //HACK: This is a temporary solution to get our controller working.
-  //TODO: Later we will implement our redis/ RabbitMQ or BullMQ to handle media uplaods
-  // const images = req.files;
-  // let imageUrls = ["image1", "image2", "image3"];
-
   const newelyCreatedPost = await Post.create({
     user: req.user._id,
     content,
@@ -245,5 +240,76 @@ export const deletePostById = catchAsync(async (req, res, next) => {
   }
 
   return sendSuccess(res, {}, "Post deleted successfully", 200);
+});
+//#endregion
+
+//#region Toggle Post Like
+export const togglePostLike = catchAsync(async (req, res, next) => {
+  const { postId } = req.params;
+  const loggedInUserId = req.user?._id;
+
+  if (!isValidObjectId(postId)) {
+    logger.warn(`Invalid MongoDB Post ID: ${postId}`);
+    return sendError(res, "Invalid Post ID", 400);
+  }
+
+  if (!isValidObjectId(loggedInUserId)) {
+    logger.warn(`Invalid MongoDB User ID: ${loggedInUserId}`);
+    return sendError(res, "Invalid User ID", 400);
+  }
+
+  const updatedPost = await Post.findByIdAndUpdate(
+    postId,
+    [
+      {
+        $set: {
+          likesCount: {
+            $cond: {
+              if: { $in: [loggedInUserId, "$likesCount"] },
+              then: {
+                $filter: {
+                  input: "$likesCount",
+                  cond: { $ne: ["$$this", loggedInUserId] },
+                },
+              },
+              else: { $concatArrays: ["$likesCount", [loggedInUserId]] },
+            },
+          },
+        },
+      },
+    ],
+    { new: true, runValidators: true },
+  );
+
+  if (!updatedPost) {
+    logger.warn(`Post Not Found: ${postId}`);
+    return sendError(res, "Post Not Found", 404);
+  }
+
+  const isLiked = updatedPost.likesCount.some(
+    (id) => id.toString() === loggedInUserId.toString(),
+  );
+  const message = isLiked
+    ? "Post like added successfully"
+    : "Post like removed successfully";
+
+  //TODO: Add a consumer at the other end. Not sure if we need anything to cosume this event but we will see.
+  await publishRabbitMQEvent("post.liked", {
+    postId: updatedPost._id.toString(),
+    userId: loggedInUserId.toString(),
+    isLiked,
+    likesCount: updatedPost.likesCount.length,
+  });
+
+  try {
+    await Promise.all([
+      clearRedisPostCache(req, postId),
+      clearRedisPostsCache(req),
+    ]);
+  } catch (error) {
+    logger.error("Failed to clear cache after like toggle", { error });
+  }
+
+  return sendSuccess(res, updatedPost, message, 200);
 });
 //#endregion
