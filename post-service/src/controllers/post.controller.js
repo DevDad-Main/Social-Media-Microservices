@@ -278,7 +278,8 @@ export const togglePostLike = catchAsync(async (req, res, next) => {
         },
       },
     ],
-    { new: true, runValidators: true },
+    // NOTE: We need to set updatePipeline to true as we are trying to use an array aggreagate
+    { new: true, runValidators: true, updatePipeline: true },
   );
 
   if (!updatedPost) {
