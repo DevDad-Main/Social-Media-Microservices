@@ -97,23 +97,16 @@ export const getPosts = catchAsync(async (req, res, next) => {
   const limit = parseInt(req.query.limit) || 10;
 
   const cacheKey = `posts:${page}-${limit}`;
-  // const cachedPosts = await req.redisClient.get(cacheKey);
-  //
-  // if (cachedPosts) {
-  //   return sendSuccess(
-  //     res,
-  //     JSON.parse(cachedPosts),
-  //     "Posts retrieved successfully (cached)",
-  //     200,
-  //   );
-  // }
+  const cachedPosts = await req.redisClient.get(cacheKey);
 
-  // const posts = await Post.find({})
-  //   .skip((page - 1) * limit)
-  //   .limit(limit)
-  //   .sort({ createdAt: -1 });
-  //TODO: Refer to commit https://github.com/DevDad-Main/Social-Media-Microservices/commit/f4ec390dbb5df4b5efa39c523a2205a98b1c8782
-  // .populate("user", "username");
+  if (cachedPosts) {
+    return sendSuccess(
+      res,
+      JSON.parse(cachedPosts),
+      "Posts retrieved successfully (cached)",
+      200,
+    );
+  }
 
   const posts = await Post.aggregate([
     {
