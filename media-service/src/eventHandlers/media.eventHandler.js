@@ -1,16 +1,18 @@
 import { logger } from "devdad-express-utils";
-import { Media } from "../models/Media.model.js";
+import { UserMedia } from "../models/UserMedia.model.js";
 import { deleteImageFromCloudinary } from "../utils/cloudinary.utils.js";
 
 export const handleDeletedPostEvent = async (event) => {
   console.log("Post Delete Event Called...", event);
   const { postId, mediaIds } = event;
   try {
-    const mediaDocumentsToDelete = await Media.find({ _id: { $in: mediaIds } });
+    const mediaDocumentsToDelete = await UserMedia.find({
+      _id: { $in: mediaIds },
+    });
 
     for (const mediaDocument of mediaDocumentsToDelete) {
       await deleteImageFromCloudinary(mediaDocument.publicId);
-      await Media.findByIdAndDelete(mediaDocument._id);
+      await UserMedia.findByIdAndDelete(mediaDocument._id);
 
       logger.info(
         `Deleted Media Document ${mediaDocument._id} - Relevant Post: ${postId}`,

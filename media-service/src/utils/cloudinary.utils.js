@@ -3,6 +3,7 @@ import { AppError, logger } from "devdad-express-utils";
 import "dotenv/config";
 import streamifier from "streamifier";
 import { PostMedia } from "../models/PostMedia.model.js";
+import { UserMedia } from "../models/UserMedia.model.js";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -43,9 +44,9 @@ async function uploadImageWithRetriesAndReturnSecureUrl(buffer) {
 export const uploadSingleMedia = async (file, userId, type) => {
   const { originalname, mimetype, buffer } = file;
 
-  const cloudinaryResponse = uploadImageWithRetriesAndReturnSecureUrl(buffer);
+  const cloudinaryResponse = await uploadImageWithRetriesAndReturnSecureUrl(buffer);
 
-  const created = await Media.create({
+  const created = await UserMedia.create({
     publicId: cloudinaryResponse.public_id,
     originalFilename: originalname,
     mimeType: mimetype,
@@ -96,7 +97,7 @@ export const uploadUpdatedUserMediaAndDeleteOriginal = async (
 ) => {
   const { originalname, mimetype, buffer } = file;
 
-  const cloudinaryResponse = uploadImageWithRetriesAndReturnSecureUrl(buffer);
+const cloudinaryResponse = await uploadImageWithRetriesAndReturnSecureUrl(buffer);
 
   try {
     logger.info("Attempting to delete image with publicId:", original);
@@ -115,7 +116,7 @@ export const uploadUpdatedUserMediaAndDeleteOriginal = async (
   }
 
   try {
-    const deleteOriginalMediaFromDB = await Media.deleteOne({
+    const deleteOriginalMediaFromDB = await UserMedia.deleteOne({
       user: userId,
       publicId: original,
     });
@@ -131,7 +132,7 @@ export const uploadUpdatedUserMediaAndDeleteOriginal = async (
     throw new AppError("Failed to delete original image from Cloudinary", 500);
   }
 
-  const created = await Media.create({
+  const created = await UserMedia.create({
     publicId: cloudinaryResponse.public_id,
     originalFilename: originalname,
     mimeType: mimetype,

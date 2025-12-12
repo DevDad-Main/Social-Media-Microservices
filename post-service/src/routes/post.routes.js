@@ -16,7 +16,9 @@ postRouter.use(authenticateUserMiddleware);
 
 postRouter.post(
   "/create-post",
-  upload.array("images", 4),
+  // upload.array("images", 4),
+  //NOTE: Temporary as postman dosent allow an array of files, we have to add multiple files with the same name
+  upload.fields([{ name: "images", maxCount: 4 }]),
   validateNewPostCreation,
   createPost,
 );

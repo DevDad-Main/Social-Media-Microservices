@@ -12,4 +12,4 @@ const mediaSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-export const Media = mongoose.model("Media", mediaSchema);
+export const UserMedia = mongoose.model("UserMedia", mediaSchema);

@@ -10,17 +10,19 @@ import {
   uploadPostsMedia,
   uploadUpdatedUserMediaAndDeleteOriginal,
 } from "../utils/cloudinary.utils.js";
-import { Media } from "../models/Media.model.js";
+import { UserMedia } from "../models/UserMedia.model.js";
 import { PostMedia } from "../models/PostMedia.model.js";
 import { isValidObjectId } from "mongoose";
 import {
   clearRedisPostsCache,
   clearRedisPostsSearchCache,
+  clearRedisUserMediaCache,
+  clearRedisUserProfileCache,
 } from "../utils/cleanRedisCache.utils.js";
 //#endregion
 
 const fetchMediaForAUserAndFindAProperty = async (req, mediaType) => {
-  const userMedia = await Media.find({ user: req.user._id });
+  const userMedia = await UserMedia.find({ user: req.user._id });
 
   if (userMedia.length === 0) {
     return null;
@@ -255,7 +257,7 @@ export const fetchUserMedia = catchAsync(async (req, res, next) => {
     return sendError(res, `ID: ${userId} is not a valid MongoDB ObjectId`, 400);
   }
 
-  const media = await Media.findOne({ user: userId });
+  const media = await UserMedia.findOne({ user: userId });
 
   if (!media) {
     logger.warn("No Media Found", 404);
