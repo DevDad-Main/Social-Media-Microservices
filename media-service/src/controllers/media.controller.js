@@ -6,10 +6,10 @@ import {
   sendSuccess,
 } from "devdad-express-utils";
 import {
-  uploadSingleMedia,
+  uploadSingleUserProfileMedia,
   uploadPostsMedia,
   uploadUpdatedUserMediaAndDeleteOriginal,
-  uploadStoryMedia,
+  uploadStoryMediaFiles,
 } from "../utils/cloudinary.utils.js";
 import { UserMedia } from "../models/UserMedia.model.js";
 import { PostMedia } from "../models/PostMedia.model.js";
@@ -84,7 +84,7 @@ export const uploadUsersProfileMedia = catchAsync(async (req, res, next) => {
     };
 
     if (profilePhoto) {
-      const profileMedia = await uploadSingleMedia(
+      const profileMedia = await uploadSingleUserProfileMedia(
         profilePhoto,
         req.user._id,
         profile_photo_type,
@@ -96,7 +96,7 @@ export const uploadUsersProfileMedia = catchAsync(async (req, res, next) => {
     }
 
     if (coverPhoto) {
-      const coverMedia = await uploadSingleMedia(
+      const coverMedia = await uploadSingleUserProfileMedia(
         coverPhoto,
         req.user._id,
         cover_photo_type,
@@ -354,7 +354,7 @@ export const uploadStoryMedia = catchAsync(async (req, res, next) => {
     if (image) {
       try {
         logger.info("About to call uploadPostsMedia with storyId:", storyId);
-        const storyImage = await uploadStoryMedia(image, storyId, "post");
+        const storyImage = await uploadStoryMediaFiles(image, storyId);
         logger.info("uploadPostsMedia returned:", postImages);
 
         if (!postImage) {

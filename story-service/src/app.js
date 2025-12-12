@@ -1,6 +1,5 @@
 import express from "express";
 import { errorHandler, logger, sendError } from "devdad-express-utils";
-// import userRouter from "./routes/user.routes.js";
 import helmet from "helmet";
 import { RateLimiterRedis } from "rate-limiter-flexible";
 import rateLimit from "express-rate-limit";
@@ -8,6 +7,7 @@ import Redis from "ioredis";
 import RedisStore from "rate-limit-redis";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import storyRouter from "./routes/story.routes.js";
 
 //#region Constants
 const app = express();
@@ -60,7 +60,7 @@ app.use(
     req.redisClient = redisClient;
     next();
   },
-  userRouter,
+  storyRouter,
 );
 //#endregion
 

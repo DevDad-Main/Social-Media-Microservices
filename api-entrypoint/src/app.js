@@ -133,6 +133,30 @@ app.use(
 );
 //#endregion
 
+//#region Story Service Proxy
+app.use(
+  "/v1/story",
+  validateUserToken,
+  proxy(process.env.STORY_SERVICE_URL, {
+    ...proxyOptions,
+    // NOTE: Allows us to overwrite certain Request Options before proxying
+    proxyReqOptDecorator: (proxyReqOptions, srcReq) => {
+      if (!srcReq.headers["content-type"].startsWith("multipart/form-data")) {
+        proxyReqOptions.headers["content-type"] = "application/json";
+      }
+      proxyReqOptions.headers["x-user-id"] = srcReq.user._id;
+      return proxyReqOptions;
+    },
+    userResDecorator: (proxyRes, proxyResData, userReq, userRes) => {
+      logger.info(
+        `Response Received from Story Service: ${proxyRes.statusCode}`,
+      );
+      return proxyResData;
+    },
+  }),
+);
+//#endregion
+
 //#region Media Service Proxy
 app.use(
   "/v1/media",

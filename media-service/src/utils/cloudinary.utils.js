@@ -4,6 +4,7 @@ import "dotenv/config";
 import streamifier from "streamifier";
 import { PostMedia } from "../models/PostMedia.model.js";
 import { UserMedia } from "../models/UserMedia.model.js";
+import { StoryMedia } from "../models/StoryMedia.model.js";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -41,7 +42,7 @@ async function uploadImageWithRetriesAndReturnSecureUrl(buffer) {
 //#endregion
 
 //#region Upload Single User Media File
-export const uploadSingleMedia = async (file, userId, type) => {
+export const uploadSingleUserProfileMedia = async (file, userId, type) => {
   const { originalname, mimetype, buffer } = file;
 
   const cloudinaryResponse =
@@ -63,7 +64,30 @@ export const uploadSingleMedia = async (file, userId, type) => {
 //#endregion
 
 //#region Upload Single Story Media File
-export const uploadStoryMedia = async (file, storyId) => {};
+export const uploadStoryMediaFiles = async (file, storyId) => {
+  const { originalname, mimetype, buffer } = file;
+
+  try {
+    const cloudinaryResponse =
+      await uploadImageWithRetriesAndReturnSecureUrl(buffer);
+
+    const created = await StoryMedia.create({
+      publicId: cloudinaryResponse.public_id,
+      originalFilename: originalname,
+      mimeType: mimetype,
+      url: cloudinaryResponse.secure_url,
+      user: userId,
+      storyId,
+    });
+
+    if (!created) throw new AppError("Failed to create media", 500);
+
+    return created;
+  } catch (error) {
+    logger.error("Failed to upload story media", { error });
+    throw new AppError("Failed to upload story media", 500);
+  }
+};
 //#endregion
 
 //#region Upload Single Post Media File

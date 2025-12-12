@@ -16,12 +16,12 @@ import { postMediaFileToMediaServiceForProcessing } from "../utils/postMediaFile
 
 //#region Add New Story
 export const addStory = catchAsync(async (req, res, next) => {
-  const errors = validationResult(req);
-
-  if (!errors.isEmpty()) {
-    logger.warn("Validation errors in addStory", { errors });
-    return sendError(res, "Validation Error", 400, errors.array());
-  }
+  // const errors = validationResult(req);
+  //
+  // if (!errors.isEmpty()) {
+  //   logger.warn("Validation errors in addStory", { errors });
+  //   return sendError(res, "Validation Error", 400, errors.array());
+  // }
 
   const userId = req.user._id;
   const { content, mediaType, backgroundColour } = req.body;

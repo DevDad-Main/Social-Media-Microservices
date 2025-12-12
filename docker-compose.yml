@@ -12,6 +12,7 @@ services:
       - post-service
       - media-service
       - search-service
+      - story-service
     environment:
       NODE_ENV: development
       REDIS_URL: redis://redis:6379
@@ -20,6 +21,7 @@ services:
       POST_SERVICE_URL: http://post-service:3002
       MEDIA_SERVICE_URL: http://media-service:3003
       SEARCH_SERVICE_URL: http://search-service:3004
+      STORY_SERVICE_URL: http://story-service:3005
     volumes:
       - ./api-entrypoint/src:/usr/src/app/src
 
@@ -50,6 +52,20 @@ services:
       RABBITMQ_URL: amqp://rabbitmq:5672
     volumes:
       - ./post-service/src:/usr/src/app/src
+
+  story-service:
+    build: ./story-service
+    env_file:
+      - ./story-service/.env
+    depends_on:
+      - redis
+      - rabbitmq
+    environment:
+      NODE_ENV: development
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://rabbitmq:5672
+    volumes:
+      - ./story-service/src:/usr/src/app/src
 
   media-service:
     build: ./media-service
