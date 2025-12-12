@@ -61,15 +61,20 @@ export const createPost = catchAsync(async (req, res, next) => {
     images?.length,
   );
   if (images && images.length > 0) {
-    console.log("INSIDE IF BLOCK: Processing images");
-    const mediaResults = await postMediaFilesToMediaServiceForProcessing(
-      newelyCreatedPost._id.toString(),
-      images,
-    );
+    try {
+      console.log("INSIDE IF BLOCK: Processing images");
+      const mediaResults = await postMediaFilesToMediaServiceForProcessing(
+        newelyCreatedPost._id.toString(),
+        images,
+      );
 
-    logger.info("MEDIA RESULTS: ", mediaResults);
+      logger.info("MEDIA RESULTS: ", mediaResults);
 
-    postMediaURLs = mediaResults.data.media.urls;
+      postMediaURLs = mediaResults.data.media.urls;
+    } catch (error) {
+      logger.error("Failed to process images", { error });
+      return sendError(res, error?.message || "Failed to process images", 500);
+    }
   }
 
   try {

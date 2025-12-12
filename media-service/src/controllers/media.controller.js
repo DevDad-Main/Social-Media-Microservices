@@ -9,6 +9,7 @@ import {
   uploadSingleMedia,
   uploadPostsMedia,
   uploadUpdatedUserMediaAndDeleteOriginal,
+  uploadStoryMedia,
 } from "../utils/cloudinary.utils.js";
 import { UserMedia } from "../models/UserMedia.model.js";
 import { PostMedia } from "../models/PostMedia.model.js";
@@ -316,6 +317,65 @@ export const uploadPostMedia = catchAsync(async (req, res, next) => {
     await clearRedisPostsCache(req);
 
     return sendSuccess(res, result, "Post Media uploaded successfully", 201);
+  } catch (error) {
+    logger.error("Upload error:", error.message);
+    return sendError(res, error.message, 500);
+  }
+});
+//#endregion
+
+//#region Upload Story Media
+export const uploadStoryMedia = catchAsync(async (req, res, next) => {
+  const { storyId } = req.body;
+  const image = req.file;
+
+  if (!storyId) {
+    logger.warn(`Post Id Not Found: ${storyId}`);
+    return sendError(res, "Post Id Not Found", 400);
+  }
+
+  if (!isValidObjectId(storyId)) {
+    logger.warn(`ID: ${storyId} is not a valid MongoDB ObjectId`);
+    return sendError(
+      res,
+      `ID: ${storyId} is not a valid MongoDB ObjectId`,
+      400,
+    );
+  }
+
+  if (!image) {
+    logger.warn("No image provided");
+    return sendError(res, "No image provided", 400);
+  }
+
+  try {
+    const result = {};
+
+    if (image) {
+      try {
+        logger.info("About to call uploadPostsMedia with storyId:", storyId);
+        const storyImage = await uploadStoryMedia(image, storyId, "post");
+        logger.info("uploadPostsMedia returned:", postImages);
+
+        if (!postImage) {
+          logger.warn("postImage is undefined after uploadStoryMedia");
+          return sendError(res, "Failed to upload story image", 500);
+        }
+
+        result.media = {
+          url: storyImage.url,
+        };
+      } catch (error) {
+        logger.error("Upload error:", { error });
+        return sendError(res, error.message, 500);
+      }
+    }
+
+    // Clear relevant caches when user media is uploaded
+    await clearRedisPostsSearchCache(req);
+    await clearRedisPostsCache(req);
+
+    return sendSuccess(res, result, "Story Media uploaded successfully", 201);
   } catch (error) {
     logger.error("Upload error:", error.message);
     return sendError(res, error.message, 500);

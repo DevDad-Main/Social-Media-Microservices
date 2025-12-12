@@ -44,7 +44,8 @@ async function uploadImageWithRetriesAndReturnSecureUrl(buffer) {
 export const uploadSingleMedia = async (file, userId, type) => {
   const { originalname, mimetype, buffer } = file;
 
-  const cloudinaryResponse = await uploadImageWithRetriesAndReturnSecureUrl(buffer);
+  const cloudinaryResponse =
+    await uploadImageWithRetriesAndReturnSecureUrl(buffer);
 
   const created = await UserMedia.create({
     publicId: cloudinaryResponse.public_id,
@@ -59,6 +60,10 @@ export const uploadSingleMedia = async (file, userId, type) => {
 
   return created;
 };
+//#endregion
+
+//#region Upload Single Story Media File
+export const uploadStoryMedia = async (file, storyId) => {};
 //#endregion
 
 //#region Upload Single Post Media File
@@ -97,7 +102,8 @@ export const uploadUpdatedUserMediaAndDeleteOriginal = async (
 ) => {
   const { originalname, mimetype, buffer } = file;
 
-const cloudinaryResponse = await uploadImageWithRetriesAndReturnSecureUrl(buffer);
+  const cloudinaryResponse =
+    await uploadImageWithRetriesAndReturnSecureUrl(buffer);
 
   try {
     logger.info("Attempting to delete image with publicId:", original);

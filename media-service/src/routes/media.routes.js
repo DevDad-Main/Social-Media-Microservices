@@ -7,6 +7,7 @@ import {
   uploadUpdatedUserProfileMedia,
   uploadPostMedia,
   fetchPostMedia,
+  uploadStoryMedia,
 } from "../controllers/media.controller.js";
 
 const mediaRouter = Router();
@@ -38,6 +39,9 @@ mediaRouter.post(
   upload.fields([{ name: "images", maxCount: 4 }]),
   uploadPostMedia,
 );
+
+mediaRouter.post("/story-media-file", upload.single("image"), uploadStoryMedia);
+
 mediaRouter.get("/fetch-user-media/:userId", fetchUserMedia);
 mediaRouter.get("/fetch-post-media/:postId", fetchPostMedia);
 
