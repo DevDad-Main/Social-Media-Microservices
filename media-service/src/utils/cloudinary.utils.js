@@ -64,7 +64,7 @@ export const uploadSingleUserProfileMedia = async (file, userId, type) => {
 //#endregion
 
 //#region Upload Single Story Media File
-export const uploadStoryMediaFiles = async (file, storyId) => {
+export const uploadStoryMediaFiles = async (file, storyId, user) => {
   const { originalname, mimetype, buffer } = file;
 
   try {
@@ -76,8 +76,8 @@ export const uploadStoryMediaFiles = async (file, storyId) => {
       originalFilename: originalname,
       mimeType: mimetype,
       url: cloudinaryResponse.secure_url,
-      user: userId,
       storyId,
+      user,
     });
 
     if (!created) throw new AppError("Failed to create media", 500);

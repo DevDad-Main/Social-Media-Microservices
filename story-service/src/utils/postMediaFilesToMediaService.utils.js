@@ -9,6 +9,7 @@ const MEDIA_SERVICE_URL =
 export const postMediaFileToMediaServiceForProcessing = async (
   storyId,
   file,
+  userId,
 ) => {
   if (!storyId || typeof storyId !== "string") {
     logger.warn("Story Id is not valid");
@@ -25,6 +26,7 @@ export const postMediaFileToMediaServiceForProcessing = async (
   const formData = new FormData();
 
   formData.append("storyId", storyId);
+  formData.append("userId", userId);
   formData.append("image", file.buffer, {
     filename: file.originalname,
     contentType: file.mimetype,

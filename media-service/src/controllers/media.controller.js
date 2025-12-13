@@ -326,7 +326,7 @@ export const uploadPostMedia = catchAsync(async (req, res, next) => {
 
 //#region Upload Story Media
 export const uploadStoryMedia = catchAsync(async (req, res, next) => {
-  const { storyId } = req.body;
+  const { storyId, userId } = req.body;
   const image = req.file;
 
   if (!storyId) {
@@ -348,16 +348,19 @@ export const uploadStoryMedia = catchAsync(async (req, res, next) => {
     return sendError(res, "No image provided", 400);
   }
 
-  try {
-    const result = {};
+  console.log("DEBUG: image = ", image);
 
+  const result = {};
+  try {
     if (image) {
       try {
-        logger.info("About to call uploadPostsMedia with storyId:", storyId);
-        const storyImage = await uploadStoryMediaFiles(image, storyId);
-        logger.info("uploadPostsMedia returned:", postImages);
+        logger.info("About to call uploadPostsMedia with storyId:", {
+          storyId,
+        });
+        const storyImage = await uploadStoryMediaFiles(image, storyId, userId);
+        logger.info("uploadPostsMedia returned:", { storyImage });
 
-        if (!postImage) {
+        if (!storyImage) {
           logger.warn("postImage is undefined after uploadStoryMedia");
           return sendError(res, "Failed to upload story image", 500);
         }
@@ -365,6 +368,8 @@ export const uploadStoryMedia = catchAsync(async (req, res, next) => {
         result.media = {
           url: storyImage.url,
         };
+
+        console.log("DEBUG: result.media = ", result.media);
       } catch (error) {
         logger.error("Upload error:", { error });
         return sendError(res, error.message, 500);
@@ -374,6 +379,8 @@ export const uploadStoryMedia = catchAsync(async (req, res, next) => {
     // Clear relevant caches when user media is uploaded
     await clearRedisPostsSearchCache(req);
     await clearRedisPostsCache(req);
+
+    console.log("DEBUG: result = ", result);
 
     return sendSuccess(res, result, "Story Media uploaded successfully", 201);
   } catch (error) {

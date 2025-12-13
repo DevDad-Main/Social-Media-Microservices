@@ -326,3 +326,43 @@ export const updateUserProfile = catchAsync(async (req, res, next) => {
   }
 });
 //#endregion
+
+//#region Fetch User By Id
+export const fetchUserById = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+
+  if (!id) {
+    logger.warn("User Id Not Found");
+    return sendError(res, "User Id Not Found", 400);
+  }
+
+  if (!isValidObjectId(id)) {
+    logger.warn(`ID: ${id} is not a valid MongoDB ObjectId`);
+    return sendError(res, `ID: ${id} is not a valid MongoDB ObjectId`, 400);
+  }
+
+  //NOTE: Check cache first
+  const cacheKey = `user_profile:${id}`;
+  const cachedProfile = await req.redisClient.get(cacheKey);
+  if (cachedProfile) {
+    return sendSuccess(
+      res,
+      JSON.parse(cachedProfile),
+      "User Profile Fetched (cached)",
+      200,
+    );
+  }
+
+  //NOTE: Fetch user from DB
+  const profile = await User.findById(id).select("-password");
+  if (!profile) {
+    logger.warn("User Not Found");
+    return sendError(res, "User Not Found", 404);
+  }
+
+  //NOTE: Cache enriched profile
+  await req.redisClient.set(cacheKey, JSON.stringify(profile), "EX", 300); // 5 minutes TTL
+
+  return sendSuccess(res, profile, "User Profile Fetched", 200);
+});
+//#endregion
