@@ -26,7 +26,7 @@ export const addStory = catchAsync(async (req, res, next) => {
   const userId = req.user._id;
   const { content, mediaType, backgroundColour } = req.body;
 
-  const media = req.file;
+  const image = req.file;
 
   const story = await Story.create({
     user: userId,
@@ -40,7 +40,7 @@ export const addStory = catchAsync(async (req, res, next) => {
     try {
       const mediaUploadResult = await postMediaFileToMediaServiceForProcessing(
         story._id.toString(),
-        media,
+        image,
       );
       console.log("DEBUG: mediaUploadResult = ", mediaUploadResult);
     } catch (error) {
