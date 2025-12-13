@@ -329,20 +329,20 @@ export const updateUserProfile = catchAsync(async (req, res, next) => {
 
 //#region Fetch User By Id
 export const fetchUserById = catchAsync(async (req, res, next) => {
-  const { id } = req.params;
+  const { userId } = req.params;
 
-  if (!id) {
+  if (!userId) {
     logger.warn("User Id Not Found");
     return sendError(res, "User Id Not Found", 400);
   }
 
-  if (!isValidObjectId(id)) {
-    logger.warn(`ID: ${id} is not a valid MongoDB ObjectId`);
-    return sendError(res, `ID: ${id} is not a valid MongoDB ObjectId`, 400);
+  if (!isValidObjectId(userId)) {
+    logger.warn(`ID: ${userId} is not a valid MongoDB ObjectId`);
+    return sendError(res, `ID: ${userId} is not a valid MongoDB ObjectId`, 400);
   }
 
   //NOTE: Check cache first
-  const cacheKey = `user_profile:${id}`;
+  const cacheKey = `user_profile:${userId}`;
   const cachedProfile = await req.redisClient.get(cacheKey);
   if (cachedProfile) {
     return sendSuccess(
@@ -354,7 +354,7 @@ export const fetchUserById = catchAsync(async (req, res, next) => {
   }
 
   //NOTE: Fetch user from DB
-  const profile = await User.findById(id).select("-password");
+  const profile = await User.findById(userId).select("-password");
   if (!profile) {
     logger.warn("User Not Found");
     return sendError(res, "User Not Found", 404);

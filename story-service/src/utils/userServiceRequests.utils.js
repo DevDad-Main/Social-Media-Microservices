@@ -13,7 +13,7 @@ export const getUserByIdFromUserService = async (userId) => {
 
   try {
     const res = await axios.get(
-      `${USER_SERVICE_URL}/api/users/fetch-user/${userId}`,
+      `${USER_SERVICE_URL}/api/auth/fetch-user/${userId}`,
       {
         headers: {
           "Content-Type": "application/json",

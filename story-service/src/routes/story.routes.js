@@ -9,6 +9,6 @@ const storyRouter = Router();
 storyRouter.use(authenticateUserMiddleware);
 
 storyRouter.post("/add-story", upload.single("image"), addStory);
-storyRouter.post("/get-stories", getStories);
+storyRouter.get("/get-stories", getStories);
 
 export default storyRouter;
