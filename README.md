@@ -2,6 +2,23 @@
 
 A scalable backend application for a social media platform built using microservices architecture. This project demonstrates modern backend development practices with Node.js, Express, MongoDB, Redis, and RabbitMQ.
 
+## Project Evolution
+
+This project represents a significant architectural refactor of the original [Knect-Backend](https://github.com/DevDad-Main/Knect-Backend) monolithic application. The refactor showcases professional growth and the implementation of industry-standard patterns and practices learned through continued development experience.
+
+### Key Improvements from Knect-Backend:
+
+- **Microservices Architecture**: Transitioned from monolithic to microservices for better scalability and maintainability
+- **Event-Driven Design**: Implemented RabbitMQ for decoupled inter-service communication
+- **Advanced Caching**: Redis-based caching strategies for improved performance
+- **Container Orchestration**: Docker and Docker Compose for consistent deployment
+- **Enhanced Security**: JWT with refresh tokens, rate limiting, and security headers
+- **Comprehensive Testing**: Full test coverage with Vitest and MongoDB Memory Server
+- **Industry Best Practices**: Following SOLID principles, proper separation of concerns, and scalable patterns
+- **Modern Development Tools**: Updated to use ES modules, modern JavaScript features, and development workflows
+
+This refactor demonstrates the ability to evolve codebases, implement modern architectural patterns, and maintain backward compatibility while improving system design.
+
 ## Architecture
 
 The application consists of the following microservices:
