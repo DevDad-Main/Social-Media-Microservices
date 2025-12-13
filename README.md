@@ -10,6 +10,7 @@ The application consists of the following microservices:
 - **User Service**: Manages user registration, authentication, login, logout, and token refresh.
 - **Post Service**: Handles post creation, retrieval, deletion, and management with event-driven updates.
 - **Media Service**: Manages media uploads and storage using Cloudinary, with automatic cleanup on post deletion.
+- **Story Service**: Manages user story creation, retrieval, and expiration with media support.
 - **Search Service**: Provides full-text search functionality for posts using MongoDB text indexes and Redis caching.
 
 ## Tech Stack
@@ -59,7 +60,7 @@ To stop the services:
 docker-compose down
 ```
 
-### Option 2: Local Development
+### Local Development
 
 1. Clone the repository:
 
@@ -92,30 +93,36 @@ docker-compose down
    # Media Service
    cd media-service && npm install && cd ..
 
-   # Search Service
-   cd search-service && npm install && cd ..
-   ```
+  # Search Service
+    cd search-service && npm install && cd ..
+
+    # Story Service
+    cd story-service && npm install && cd ..
+    ```
 
 4. Create `.env` files in each service directory (see Environment Variables section)
 
 5. Start each microservice in separate terminals:
 
-   ```bash
-   # Terminal 1: API Gateway
-   cd api-entrypoint && npm run dev
+    ```bash
+    # Terminal 1: API Gateway
+    cd api-entrypoint && npm run dev
 
-   # Terminal 2: User Service
-   cd user-service && npm run dev
+    # Terminal 2: User Service
+    cd user-service && npm run dev
 
-   # Terminal 3: Post Service
-   cd post-service && npm run dev
+    # Terminal 3: Post Service
+    cd post-service && npm run dev
 
-   # Terminal 4: Media Service
-   cd media-service && npm run dev
+    # Terminal 4: Media Service
+    cd media-service && npm run dev
 
-   # Terminal 5: Search Service
-   cd search-service && npm run dev
-   ```
+    # Terminal 5: Search Service
+    cd search-service && npm run dev
+
+    # Terminal 6: Story Service
+    cd story-service && npm run dev
+    ```
 
 ## Environment Variables
 
@@ -176,54 +183,57 @@ RABBITMQ_URL=amqp://rabbitmq:5672
 JWT_SECRET=your_jwt_secret_here
 ```
 
+### Story Service (.env)
+
+```
+PORT=3005
+MONGO_URI=mongodb://mongodb:27017/social_media_stories
+REDIS_URL=redis://redis:6379
+RABBITMQ_URL=amqp://rabbitmq:5672
+JWT_SECRET=your_jwt_secret_here
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+```
+
 ### For Local Development
 
 Replace the service names with `localhost` in the URLs above (e.g., `REDIS_URL=redis://localhost:6379`, `MONGO_URI=mongodb://localhost:27017/social_media_users`).
-PORT=3000
-REDIS_URL=redis://redis:6379
-USER_SERVICE_URL=http://user-service:3001
-POST_SERVICE_URL=http://post-service:3002
-MEDIA_SERVICE_URL=http://media-service:3003
-SEARCH_SERVICE_URL=http://search-service:3004
+
+#### API Gateway (.env)
 
 ```
-
-### API Gateway (.env)
-```
-
 PORT=3000
 REDIS_URL=redis://localhost:6379
 USER_SERVICE_URL=http://localhost:3001
 POST_SERVICE_URL=http://localhost:3002
 MEDIA_SERVICE_URL=http://localhost:3003
 SEARCH_SERVICE_URL=http://localhost:3004
-
+STORY_SERVICE_URL=http://localhost:3005
 ```
 
-### User Service (.env)
-```
+#### User Service (.env)
 
+```
 PORT=3001
 MONGO_URI=mongodb://localhost:27017/social_media_users
 REDIS_URL=redis://localhost:6379
 JWT_SECRET=your_jwt_secret_here
-
 ```
 
-### Post Service (.env)
-```
+#### Post Service (.env)
 
+```
 PORT=3002
 MONGO_URI=mongodb://localhost:27017/social_media_posts
 REDIS_URL=redis://localhost:6379
 RABBITMQ_URL=amqp://localhost:5672
 JWT_SECRET=your_jwt_secret_here
-
 ```
 
-### Media Service (.env)
-```
+#### Media Service (.env)
 
+```
 PORT=3003
 MONGO_URI=mongodb://localhost:27017/social_media_media
 REDIS_URL=redis://localhost:6379
@@ -232,19 +242,30 @@ JWT_SECRET=your_jwt_secret_here
 CLOUDINARY_CLOUD_NAME=your_cloud_name
 CLOUDINARY_API_KEY=your_api_key
 CLOUDINARY_API_SECRET=your_api_secret
-
 ```
 
-### Search Service (.env)
-```
+#### Search Service (.env)
 
+```
 PORT=3004
 MONGO_URI=mongodb://localhost:27017/social_media_search
 REDIS_URL=redis://localhost:6379
 RABBITMQ_URL=amqp://localhost:5672
 JWT_SECRET=your_jwt_secret_here
+```
 
-````
+#### Story Service (.env)
+
+```
+PORT=3005
+MONGO_URI=mongodb://localhost:27017/social_media_stories
+REDIS_URL=redis://localhost:6379
+RABBITMQ_URL=amqp://localhost:5672
+JWT_SECRET=your_jwt_secret_here
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+```
 
 **Note**: For Docker Compose deployment, replace `localhost` with the service names (e.g., `mongodb`, `redis`, `rabbitmq`) as shown in the Quick Start environment variables above.
 
@@ -254,12 +275,17 @@ The application uses RabbitMQ for inter-service communication:
 
 - **post.created**: Published when a post is created, consumed by Search Service to index the post
 - **post.deleted**: Published when a post is deleted, consumed by Search Service (removes index) and Media Service (deletes associated media files)
+- **post.liked**: Published when a post is liked/unliked, consumed by other services for analytics
+- **story.created**: Published when a story is created, consumed by Search Service to index the story
+- **story.deleted**: Published when a story is deleted, consumed by Search Service (removes index) and Media Service (deletes associated media files)
 
 ## Caching Strategy
 
 - **Posts**: Cached for 5 minutes with pagination support
 - **Individual Posts**: Cached for 1 hour
+- **Stories**: Cached for 3 minutes
 - **Search Results**: Cached for 3 minutes
+- **User Data**: Cached for 10 minutes
 - **Rate Limiting**: Uses Redis store for distributed rate limiting
 
 ## Testing
@@ -275,7 +301,10 @@ cd post-service && npm test
 
 # Media Service tests (Note: requires Cloudinary credentials)
 cd media-service && npm test
-````
+
+# Search Service tests
+cd search-service && npm test
+```
 
 Tests use MongoDB Memory Server for isolated database testing.
 
@@ -302,6 +331,14 @@ Tests use MongoDB Memory Server for isolated database testing.
 ### Search (Protected)
 
 - `GET /v1/search/posts?query=search_term` - Search posts by content
+- `GET /v1/search/users?query=search_term` - Search users by username
+
+### Stories (Protected)
+
+- `POST /v1/stories/create-story` - Create a new story
+- `GET /v1/stories/get-stories` - Get active stories
+- `GET /v1/stories/get-story/:id` - Get story by ID
+- `DELETE /v1/stories/delete-story/:id` - Delete story by ID
 
 ## Development Tools
 
