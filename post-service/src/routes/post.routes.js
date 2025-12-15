@@ -3,6 +3,7 @@ import { authenticateUserMiddleware } from "../middleware/auth.middleware.js";
 import {
   createPost,
   deletePostById,
+  fetchPostById,
   getPostById,
   getPosts,
   togglePostLike,
@@ -26,5 +27,9 @@ postRouter.get("/get-posts", getPosts);
 postRouter.get("/get-post/:id", getPostById);
 postRouter.post("/toggle-post-like/:postId", togglePostLike);
 postRouter.delete("/delete-post/:id", deletePostById);
+
+
+//NOTE: Internal Service Routes
+postRouter.get("/fetch-post-by-id/:postId", fetchPostById)
 
 export default postRouter;

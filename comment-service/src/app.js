@@ -53,9 +53,9 @@ app.use((req, res, next) => {
 //#endregion
 
 //#region Route Entry Points
-app.use("/api/comment/TODO", expressEndpointRateLimiter);
+app.use("/api/comments/TODO", expressEndpointRateLimiter);
 app.use(
-  "/api/comment",
+  "/api/comments",
   (req, res, next) => {
     req.redisClient = redisClient;
     next();

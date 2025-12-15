@@ -205,6 +205,29 @@ app.use(
 );
 //#endregion
 
+//#region Comments Proxy
+app.use(
+  "/v1/comments",
+  validateUserToken,
+  proxy(process.env.COMMENT_SERVICE_URL, {
+    ...proxyOptions,
+    // NOTE: Allows us to overwrite certain Request Options before proxying
+    proxyReqOptDecorator: (proxyReqOptions, srcReq) => {
+      proxyReqOptions.headers["x-user-id"] = srcReq.user._id;
+      proxyReqOptions.headers["content-type"] = "application/json";
+      return proxyReqOptions;
+    },
+    userResDecorator: (proxyRes, proxyResData, userReq, userRes) => {
+      logger.info(
+        `Response Received from Search Service: ${proxyRes.statusCode}`,
+      );
+      return proxyResData;
+    },
+    parseReqBody: false,
+  }),
+);
+//#endregion
+
 //#region Global Error Handler
 app.use(errorHandler);
 //#endregion

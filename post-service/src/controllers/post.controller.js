@@ -407,3 +407,23 @@ export const togglePostLike = catchAsync(async (req, res, next) => {
   return sendSuccess(res, updatedPost, message, 200);
 });
 //#endregion
+
+//#region Fetch Post By Id
+export const fetchPostById = catchAsync(async (req, res, next) => {
+  const { postId } = req.params;
+
+  if (!isValidObjectId(postId)) {
+    logger.warn(`Invalid MongoDB Post ID: ${postId}`);
+    return sendError(res, "Invalid Post ID", 400);
+  }
+
+  const post = await Post.findById(postId);
+
+  if (!post) {
+    logger.warn(`Post Not Found: ${postId}`);
+    return sendError(res, "Post Not Found", 404);
+  }
+
+  return sendSuccess(res, { postId: post._id.toString() }, "Post retrieved successfully", 200);
+});
+//#endregion

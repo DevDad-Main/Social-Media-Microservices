@@ -54,9 +54,9 @@ app.use((req, res, next) => {
 //#endregion
 
 //#region Route Entry Points
-app.use("/api/auth/register", expressEndpointRateLimiter);
+app.use("/api/users/register", expressEndpointRateLimiter);
 app.use(
-  "/api/auth",
+  "/api/users",
   (req, res, next) => {
     req.redisClient = redisClient;
     next();
@@ -65,7 +65,7 @@ app.use(
 );
 
 app.use(
-  "/api/users",
+  "/api/auth",
   (req, res, next) => {
     req.redisClient = redisClient;
     next();
