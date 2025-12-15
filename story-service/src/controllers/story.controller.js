@@ -8,8 +8,7 @@ import {
 import { validationResult } from "express-validator";
 import { isValidObjectId } from "mongoose";
 import {
-  clearRedisUserCache,
-  clearRedisUsersSearchCache,
+  clearRedisStoriesCache,
 } from "../utils/cleanRedisCache.utils.js";
 import { publishEvent as publishRabbitMQEvent } from "../utils/rabbitmq.utils.js";
 import { postMediaFileToMediaServiceForProcessing } from "../utils/postMediaFilesToMediaService.utils.js";
@@ -64,6 +63,7 @@ export const addStory = catchAsync(async (req, res, next) => {
   };
 
   //TODO: Later add our inngest functions to delete stories in 24 hours. -> Even better check if RabbitMQ can handle this
+  await clearRedisStoriesCache(req);
 
   return sendSuccess(res, enrichedStory, "Story created successfully", 201);
 });
@@ -254,6 +254,9 @@ export const deleteStory = catchAsync(async (req, res, next) => {
       logger.warn("Story Not Deleted");
       return sendError(res, "Story Not Deleted", 404);
     }
+
+    await clearRedisStoriesCache(req);
+
     return sendSuccess(res, "Story deleted successfully", 200);
   } catch (error) {
     logger.warn("Failed to delete story", { error });
