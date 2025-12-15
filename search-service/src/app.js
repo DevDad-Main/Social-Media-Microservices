@@ -14,7 +14,7 @@ const app = express();
 const redisClient = new Redis(process.env.REDIS_URL);
 const rateLimiter = new RateLimiterRedis({
   storeClient: redisClient,
-  keyPrefix: "user-rate-limit-middleware",
+  keyPrefix: "search-rate-limit-middleware",
   points: 10,
   duration: 1,
 });

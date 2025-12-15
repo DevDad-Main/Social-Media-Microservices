@@ -1,19 +1,20 @@
 import express from "express";
 import { errorHandler, logger, sendError } from "devdad-express-utils";
-import postRouter from "./routes/post.routes.js";
+import authenticatedUsersRouter from "./routes/authenticatedUsers.routes.js";
 import helmet from "helmet";
 import { RateLimiterRedis } from "rate-limiter-flexible";
 import rateLimit from "express-rate-limit";
 import Redis from "ioredis";
 import RedisStore from "rate-limit-redis";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 
 //#region Constants
 const app = express();
 const redisClient = new Redis(process.env.REDIS_URL);
 const rateLimiter = new RateLimiterRedis({
   storeClient: redisClient,
-  keyPrefix: "post-rate-limit-middleware",
+  keyPrefix: "comment-rate-limit-middleware",
   points: 10,
   duration: 1,
 });
@@ -38,6 +39,7 @@ app.use(helmet());
 app.use(cors());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+app.use(cookieParser());
 
 app.use((req, res, next) => {
   rateLimiter
@@ -51,15 +53,14 @@ app.use((req, res, next) => {
 //#endregion
 
 //#region Route Entry Points
-app.use("/api/posts/create-post", expressEndpointRateLimiter);
-//NOTE: Passing redisClient to the post router -> Later used for sending data to media-service
+app.use("/api/comment/TODO", expressEndpointRateLimiter);
 app.use(
-  "/api/posts",
+  "/api/comment",
   (req, res, next) => {
     req.redisClient = redisClient;
     next();
   },
-  postRouter,
+
 );
 //#endregion
 
