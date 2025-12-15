@@ -1,6 +1,5 @@
 import express from "express";
 import { errorHandler, logger, sendError } from "devdad-express-utils";
-import authenticatedUsersRouter from "./routes/authenticatedUsers.routes.js";
 import helmet from "helmet";
 import { RateLimiterRedis } from "rate-limiter-flexible";
 import rateLimit from "express-rate-limit";
@@ -8,6 +7,7 @@ import Redis from "ioredis";
 import RedisStore from "rate-limit-redis";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import commentRouter from "./routes/comment.routes.js";
 
 //#region Constants
 const app = express();
@@ -53,14 +53,14 @@ app.use((req, res, next) => {
 //#endregion
 
 //#region Route Entry Points
-app.use("/api/comments/TODO", expressEndpointRateLimiter);
+app.use("/api/comments/add-comment", expressEndpointRateLimiter);
 app.use(
   "/api/comments",
   (req, res, next) => {
     req.redisClient = redisClient;
     next();
   },
-
+  commentRouter
 );
 //#endregion
 

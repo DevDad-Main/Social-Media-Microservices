@@ -219,7 +219,7 @@ app.use(
     },
     userResDecorator: (proxyRes, proxyResData, userReq, userRes) => {
       logger.info(
-        `Response Received from Search Service: ${proxyRes.statusCode}`,
+        `Response Received from Comment Service: ${proxyRes.statusCode}`,
       );
       return proxyResData;
     },

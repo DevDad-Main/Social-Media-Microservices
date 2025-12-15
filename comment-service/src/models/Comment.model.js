@@ -18,7 +18,7 @@ const commentSchema = new mongoose.Schema({
     ref: "Comment",
     default: null, //NOTE: null = top level, otherwise it's a reply
   },
-  replies: [{ type: Schema.Types.ObjectId, ref: "Comment" }],
+  replies: [{ type: mongoose.Schema.Types.ObjectId, ref: "Comment" }],
   isOwner: {
     type: Boolean,
     default: false,

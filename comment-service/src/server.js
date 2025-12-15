@@ -1,13 +1,11 @@
 import "dotenv/config";
 import { connectDB, getDBStatus, logger } from "devdad-express-utils";
 import { app } from "./app.js";
-import { initializeRabbitMQ } from "./utils/rabbitmq.utils.js";
 
 await connectDB();
 
 (async () => {
   try {
-    await initializeRabbitMQ();
 
     app.listen(process.env.PORT || 3006, () => {
       logger.info(

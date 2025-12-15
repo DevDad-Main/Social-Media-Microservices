@@ -1,13 +1,14 @@
 import mongoose, { isValidObjectId } from "mongoose";
-import { Comment } from "../models/Comment.model";
-import { catchAsync, logger, sendError } from "devdad-express-utils";
-import { fetchPostFromPostServiceById } from "../utils/fetchPostById.utils";
-import { fetchUserFromUserServiceById } from "../utils/fetcherUserById.utils";
+import { Comment } from "../models/Comment.model.js";
+import { catchAsync, logger, sendError, sendSuccess } from "devdad-express-utils";
+import { fetchPostFromPostServiceById } from "../utils/fetchPostById.utils.js";
+import { fetchUserFromUserServiceById } from "../utils/fetcherUserById.utils.js";
 
 
 //#region Add Comment
 export const addComment = catchAsync(async (req, res, next) => {
-  const { postId, content } = req.body;
+  const { postId } = req.params;
+  const { content } = req.body;
 
   try {
     if (!isValidObjectId(postId)) {
@@ -25,7 +26,7 @@ export const addComment = catchAsync(async (req, res, next) => {
     const newComment = await Comment.create({
       content,
       post: postResponse.postId,
-      owner: req.user._id,
+      owner: req.user._id?.toString(),
     });
 
     if (!newComment) {
@@ -33,9 +34,22 @@ export const addComment = catchAsync(async (req, res, next) => {
       return sendError(res, "Failed to create comment", 500);
     }
 
-    const userResponse = await fetchUserFromUserServiceById(req.user._id);
-  } catch (error) {
+    const userResponse = await fetchUserFromUserServiceById(req.user._id?.toString());
 
+    if (!userResponse) {
+      logger.error("Failed to fetch user");
+      return sendError(res, "Failed to fetch user", 500);
+    }
+
+    const enrichedComment = {
+      ...newComment.toObject(),
+      user: userResponse,
+    };
+
+    return sendSuccess(res, enrichedComment, "Comment created successfully", 201);
+  } catch (error) {
+    logger.error("Failed to create comment", { error });
+    return sendError(res, error.message || "Failed to create comment", 500);
   }
 })
 //#endregion
