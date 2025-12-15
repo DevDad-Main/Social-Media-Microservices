@@ -1,0 +1,14 @@
+### Test Stories Endpoint ###
+### First login to get a token
+POST http://localhost:3000/v1/auth/login
+content-type: application/json
+
+{
+  "email": "test2@test.com",
+  "password": "Abc123!"
+}
+
+### Test get stories (replace with actual token from login response)
+GET http://localhost:3000/v1/story/get-stories
+Authorization: Bearer YOUR_TOKEN_HERE
+Cookie: accessToken=YOUR_TOKEN_HERE

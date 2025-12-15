@@ -66,7 +66,7 @@ export const addStory = catchAsync(async (req, res, next) => {
 
 //#region Fetch Story
 export const getStories = catchAsync(async (req, res, next) => {
-  const userId = req.user._id;
+  const userId = req.user._id?.toString();
 
   if (!userId) {
     logger.warn("User Not Authenticated");
@@ -172,7 +172,7 @@ export const getStories = catchAsync(async (req, res, next) => {
       await Promise.all(
         uniqueUserIds.map(async (uid) => {
           try {
-            const userDetails = await getUserByIdFromUserService(uid);
+            const userDetails = await getUserByIdFromUserService(uid.toString());
             userDetailsMap.set(uid, {
               _id: userDetails._id,
               username: userDetails.username,

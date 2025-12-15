@@ -117,7 +117,7 @@ app.use(
     ...proxyOptions,
     // NOTE: Allows us to overwrite certain Request Options before proxying
     proxyReqOptDecorator: (proxyReqOptions, srcReq) => {
-      if (!srcReq.headers["content-type"].startsWith("multipart/form-data")) {
+      if (!srcReq.headers["content-type"] || !srcReq.headers["content-type"].startsWith("multipart/form-data")) {
         proxyReqOptions.headers["content-type"] = "application/json";
       }
       proxyReqOptions.headers["x-user-id"] = srcReq.user._id;
@@ -141,7 +141,7 @@ app.use(
     ...proxyOptions,
     // NOTE: Allows us to overwrite certain Request Options before proxying
     proxyReqOptDecorator: (proxyReqOptions, srcReq) => {
-      if (!srcReq.headers["content-type"].startsWith("multipart/form-data")) {
+      if (!srcReq.headers["content-type"] || !srcReq.headers["content-type"].startsWith("multipart/form-data")) {
         proxyReqOptions.headers["content-type"] = "application/json";
       }
       proxyReqOptions.headers["x-user-id"] = srcReq.user._id;
@@ -166,7 +166,7 @@ app.use(
     // NOTE: Allows us to overwrite certain Request Options before proxying
     proxyReqOptDecorator: (proxyReqOptions, srcReq) => {
       proxyReqOptions.headers["x-user-id"] = srcReq.user._id;
-      if (!srcReq.headers["content-type"].startsWith("multipart/form-data")) {
+      if (!srcReq.headers["content-type"] || !srcReq.headers["content-type"].startsWith("multipart/form-data")) {
         proxyReqOptions.headers["content-type"] = "application/json";
       }
       return proxyReqOptions;
