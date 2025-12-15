@@ -28,6 +28,11 @@ export const addStory = catchAsync(async (req, res, next) => {
   const userId = req.user._id;
   const { content, mediaType, backgroundColour } = req.body;
 
+  //TODO for now we will handle it like so as we need to sort issue with express validator and multer.
+  if (!content || !mediaType || !backgroundColour) {
+    return sendError(res, "Validation Error", 400);
+  }
+
   const image = req.file;
 
   const story = await Story.create({
@@ -71,6 +76,14 @@ export const getStories = catchAsync(async (req, res, next) => {
   if (!userId) {
     logger.warn("User Not Authenticated");
     return sendError(res, "User Not Authenticated", 401);
+  }
+
+
+  const cacheKey = `stories`;
+  const cachedPosts = await req.redisClient.get(cacheKey);
+
+  if (cachedPosts) {
+    return sendSuccess(res, JSON.parse(cachedPosts), "Stories retrieved successfully (cached)", 200);
   }
 
   try {
@@ -205,6 +218,8 @@ export const getStories = catchAsync(async (req, res, next) => {
       count: enrichedStories.length,
     });
 
+    await req.redisClient.set(cacheKey, JSON.stringify(enrichedStories), "EX", 300);
+
     return sendSuccess(
       res,
       enrichedStories,
@@ -214,6 +229,35 @@ export const getStories = catchAsync(async (req, res, next) => {
   } catch (error) {
     logger.error("Failed to fetch stories", { error });
     return sendError(res, error.message || "Failed to fetch stories", 500);
+  }
+});
+//#endregion
+
+//#region Delete Story
+export const deleteStory = catchAsync(async (req, res, next) => {
+  const { storyId } = req.params;
+
+  try {
+    if (!storyId) {
+      logger.warn("Story ID not provided");
+      return sendError(res, "Story ID not provided", 400);
+    }
+
+    if (!isValidObjectId(storyId)) {
+      logger.warn("Invalid Story ID");
+      return sendError(res, "Invalid Story ID", 400);
+    }
+
+    const deletedStory = await Story.findByIdAndDelete(storyId);
+
+    if (deletedStory.deletedCount === 0) {
+      logger.warn("Story Not Deleted");
+      return sendError(res, "Story Not Deleted", 404);
+    }
+    return sendSuccess(res, "Story deleted successfully", 200);
+  } catch (error) {
+    logger.warn("Failed to delete story", { error });
+    return sendError(res, error.message || "Failed to delete story", 500);
   }
 });
 //#endregion
