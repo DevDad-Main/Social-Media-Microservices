@@ -52,8 +52,8 @@ export const addStory = catchAsync(async (req, res, next) => {
       console.log("DEBUG: mediaUploadResult = ", mediaUploadResult);
       mediaURL = mediaUploadResult.data.media.url;
     } catch (error) {
-      logger.error("Failed to process images", { error });
-      return sendError(res, error?.message || "Failed to process images", 500);
+      logger.error("Failed to process image", { error });
+      return sendError(res, error?.message || "Failed to process image", 500);
     }
   }
 

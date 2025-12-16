@@ -69,7 +69,7 @@ app.use(expressEndpointRateLimiter);
 
 //#region User Service Proxy - Public Auth Routes (no token required)
 app.use(
-  "/v1/auth",
+  "/v1/users",
   proxy(process.env.USER_SERVICE_URL, {
     ...proxyOptions,
     // NOTE: Allows us to overwrite certain Request Options before proxying
@@ -89,7 +89,7 @@ app.use(
 
 //#region User Service Proxy - Protected User Routes (token required)
 app.use(
-  "/v1/users",
+  "/v1/auth",
   validateUserToken,
   proxy(process.env.USER_SERVICE_URL, {
     ...proxyOptions,
@@ -213,7 +213,6 @@ app.use(
     ...proxyOptions,
     // NOTE: Allows us to overwrite certain Request Options before proxying
     proxyReqOptDecorator: (proxyReqOptions, srcReq) => {
-      proxyReqOptions.headers["x-user-id"] = srcReq.user._id;
       proxyReqOptions.headers["content-type"] = "application/json";
       return proxyReqOptions;
     },

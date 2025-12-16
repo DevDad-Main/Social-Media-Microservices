@@ -53,7 +53,8 @@ app.use((req, res, next) => {
 //#endregion
 
 //#region Route Entry Points
-app.use("/api/comments/add-comment", expressEndpointRateLimiter);
+app.use("/api/comments/add-comment/:postId", expressEndpointRateLimiter);
+app.use("/api/comments/test", expressEndpointRateLimiter);
 app.use(
   "/api/comments",
   (req, res, next) => {

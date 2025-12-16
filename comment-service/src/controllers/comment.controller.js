@@ -1,4 +1,4 @@
-import mongoose, { isValidObjectId } from "mongoose";
+import { isValidObjectId } from "mongoose";
 import { Comment } from "../models/Comment.model.js";
 import { catchAsync, logger, sendError, sendSuccess } from "devdad-express-utils";
 import { fetchPostFromPostServiceById } from "../utils/fetchPostById.utils.js";
@@ -53,3 +53,7 @@ export const addComment = catchAsync(async (req, res, next) => {
   }
 })
 //#endregion
+
+export const testController = catchAsync(async (req, res, next) => {
+  return sendSuccess(res, "Hello World!", "Hello World!", 200);
+})

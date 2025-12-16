@@ -161,24 +161,6 @@ export const generateRefreshToken = catchAsync(async (req, res, next) => {
 
 //#region Logout User
 export const logoutUser = catchAsync(async (req, res, next) => {
-  // const { refreshToken } = req.body;
-  //
-  // if (!refreshToken) {
-  //   logger.warn("Refresh Token Not Found");
-  //   return sendError(res, "Refresh Token Not Found", 400);
-  // }
-  //
-  // const tokenToDelete = await RefreshToken.deleteOne({
-  //   token: refreshToken,
-  // });
-  //
-  // if (tokenToDelete.deletedCount === 0) {
-  //   logger.warn("Refresh Token Failed To Delete");
-  //   return sendError(res, "Refresh Token Failed To Delete", 404);
-  // }
-
-  await clearRedisUserCache(req, req.user._id);
-
   res
     .clearCookie("accessToken", HTTP_OPTIONS)
     .clearCookie("refreshToken", HTTP_OPTIONS);
