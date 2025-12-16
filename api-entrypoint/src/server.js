@@ -17,5 +17,9 @@ app.listen(process.env.PORT || 3000, () => {
   logger.info(
     `SEARCH-Service is running on port ${process.env.SEARCH_SERVICE_URL || 3004}`,
   );
+
+  logger.info(
+    `COMMENT-Service is running on port ${process.env.COMMENT_SERVICE_URL || 3006}`,
+  );
   logger.info("Redis is running on ->", { redisUrl: process.env.REDIS_URL });
 });

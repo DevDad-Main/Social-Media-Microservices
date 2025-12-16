@@ -13,13 +13,13 @@ import {
 
 const userRouter = Router();
 
+//NOTE: Internal service routes (no auth required)
+userRouter.get("/fetch-user/:userId", fetchUserById);
+
 // Public auth routes (no token required)
 userRouter.post("/register", registerUserValidation, registerUser);
 userRouter.post("/login", loginUserValidation, loginUser);
 userRouter.post("/logout", logoutUser);
 userRouter.post("/refresh-token", generateRefreshToken);
-
-//NOTE: Internal service routes
-userRouter.get("/fetch-user/:userId", fetchUserById);
 
 export default userRouter;
