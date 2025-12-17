@@ -13,6 +13,7 @@ export const fetchPostFromPostServiceById = async (postId) => {
     logger.info("Attempting to fetch post", { postId, url: `${POST_SERVICE_URL}/api/posts/fetch-post-by-id/${postId}` });
     const res = await axios.get(
       `${POST_SERVICE_URL}/api/posts/fetch-post-by-id/${postId}`,
+      { timeout: 5000 } // 5 second timeout
     );
     logger.info("Successfully fetched post", { data: res.data });
 

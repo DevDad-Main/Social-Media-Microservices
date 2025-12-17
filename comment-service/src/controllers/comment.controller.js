@@ -7,10 +7,11 @@ import { fetchUserFromUserServiceById } from "../utils/fetcherUserById.utils.js"
 
 //#region Add Comment
 export const addComment = catchAsync(async (req, res, next) => {
-  const { postId } = req.params;
-  const { content } = req.body;
-
   try {
+    logger.info("Adding comment", { url: req.url, body: req.body, params: req.params });
+    const { postId } = req.params;
+    const { content } = req.body;
+
     if (!isValidObjectId(postId)) {
       logger.error("Invalid MongoDB ObjectId");
       return sendError(res, "Invalid MongoDB ObjectId", 400);
@@ -25,7 +26,7 @@ export const addComment = catchAsync(async (req, res, next) => {
 
     const newComment = await Comment.create({
       content,
-      post: postResponse.postId,
+      post: postResponse.data.postId,
       owner: req.user._id?.toString(),
     });
 
