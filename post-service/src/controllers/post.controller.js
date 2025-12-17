@@ -17,6 +17,7 @@ import {
   postMediaFilesToMediaServiceForProcessing,
   getPostMediaFilesFromMediaService,
 } from "../utils/postServiceAxiosRequests.utils.js";
+import { fetchPostCommentsFromCommentService } from "../utils/fetchPostCommentsFromCommentService.js";
 
 //#region Create Post
 export const createPost = catchAsync(async (req, res, next) => {
@@ -224,47 +225,62 @@ export const getPosts = catchAsync(async (req, res, next) => {
 
 //#region Get Post By Id
 export const getPostById = catchAsync(async (req, res, next) => {
-  const { id } = req.params;
-
-  if (!isValidObjectId(id)) {
-    logger.warn(`Invalid Post ID: ${id}`);
-    return sendError(res, "Invalid Post ID", 400);
-  }
-
-  const cacheKey = `post:${id}`;
-  const cachedPost = await req.redisClient.get(cacheKey);
-
-  if (cachedPost) {
-    return sendSuccess(
-      res,
-      JSON.parse(cachedPost),
-      "Posts retrieved successfully (cached)",
-      200,
-    );
-  }
-
-  const post = await Post.findById(id);
-
-  if (!post) {
-    logger.warn(`Post with ID ${id} not found`);
-    return sendError(res, "Post not found", 404);
-  }
-
-  let enrichedPost = {};
   try {
+    const { id } = req.params;
+
+    if (!isValidObjectId(id)) {
+      logger.warn(`Invalid Post ID: ${id}`);
+      return sendError(res, "Invalid Post ID", 400);
+    }
+
+    const cacheKey = `post:${id}`;
+    // const cachedPost = await req.redisClient.get(cacheKey);
+    //
+    // if (cachedPost) {
+    //   return sendSuccess(
+    //     res,
+    //     JSON.parse(cachedPost),
+    //     "Posts retrieved successfully (cached)",
+    //     200,
+    //   );
+    // }
+
+    const post = await Post.findById(id);
+
+    if (!post) {
+      logger.warn(`Post with ID ${id} not found`);
+      return sendError(res, "Post not found", 404);
+    }
+
+    let enrichedPost = {};
     const postMediaFiles = await getPostMediaFilesFromMediaService(id);
+    console.log("DEBUG: postMediaFiles = ", postMediaFiles);
 
     if (!postMediaFiles) {
       logger.warn(`Post Media Files not found`);
       return sendError(res, "Post Media Files not found", 404);
     }
 
-    console.log("DEBUG: postMediaFiles = ", postMediaFiles);
+    const postComments = await fetchPostCommentsFromCommentService(id)
+
+    if (!postComments) {
+      logger.warn(`Post Comments not found`);
+      return sendError(res, "Post Comments not found", 404);
+    }
+
+    const userIds = postComments.data.map((comment) => comment.owner.toString());
+    const userProfiles = await;
 
     enrichedPost = {
       ...post.toObject(),
       media: postMediaFiles,
+      comments: postComments.data.map((comment) => comment.content),
     };
+    // NOTE: We cache the result for 1 hour as a single post is not expected to change often
+    await req.redisClient.set(cacheKey, JSON.stringify(enrichedPost), "EX", 3600);
+
+    return sendSuccess(res, enrichedPost, "Post retrieved successfully", 200);
+
   } catch (error) {
     logger.error("Failed to fetch pos media files:", { error });
     return sendError(
@@ -273,11 +289,6 @@ export const getPostById = catchAsync(async (req, res, next) => {
       500,
     );
   }
-
-  // NOTE: We cache the result for 1 hour as a single post is not expected to change often
-  await req.redisClient.set(cacheKey, JSON.stringify(enrichedPost), "EX", 3600);
-
-  return sendSuccess(res, enrichedPost, "Post retrieved successfully", 200);
 });
 //#endregion
 

@@ -119,3 +119,28 @@ export const replyToComment = catchAsync(async (req, res, next) => {
   }
 })
 //#endregion
+
+//#region Fetch Comments By postId
+export const fetchCommentsByPost = catchAsync(async (req, res, next) => {
+  try {
+    const { postId } = req.params;
+
+    if (!isValidObjectId(postId)) {
+      logger.warn(`Invalid Post ID: ${postId}`);
+      return sendError(res, "Invalid Post ID", 400);
+    }
+    const comments = await Comment.find({ post: postId })
+    console.log("DEBUG: comments = ", comments);
+
+    if (comments.length === 0) {
+      logger.warn(`No comments found for post: ${postId}`);
+      return sendError(res, "No comments found for post", 404);
+    }
+
+    return sendSuccess(res, comments, "Comments retrieved successfully", 200);
+  } catch (error) {
+    logger.error("Failed to fetch comments by post", { error });
+    return sendError(res, error.message || "Failed to fetch comments by post", 500)
+  }
+})
+//#endregion
