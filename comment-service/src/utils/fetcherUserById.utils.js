@@ -16,6 +16,7 @@ export const fetchUserFromUserServiceById = async (userId) => {
       { timeout: 5000 } // 5 second timeout
     );
     logger.info("Successfully fetched user", { data: res.data });
+
     return res.data;
   } catch (error) {
     logger.error("Failed to fetch user by id", { error: error.message, code: error.code });
