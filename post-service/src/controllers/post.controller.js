@@ -1,4 +1,4 @@
-import { isValidObjectId } from "mongoose";
+import mongoose, { isValidObjectId, ObjectId } from "mongoose";
 import { validationResult } from "express-validator";
 import { Post } from "../models/Post.model.js";
 import {
@@ -227,73 +227,229 @@ export const getPosts = catchAsync(async (req, res, next) => {
 //#region Get Post By Id
 export const getPostById = catchAsync(async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const { postId } = req.params;
 
-    if (!isValidObjectId(id)) {
-      logger.warn(`Invalid Post ID: ${id}`);
+    if (!isValidObjectId(postId)) {
+      logger.warn(`Invalid Post ID: ${postId}`);
       return sendError(res, "Invalid Post ID", 400);
     }
 
-    const cacheKey = `post:${id}`;
-    // const cachedPost = await req.redisClient.get(cacheKey);
-    //
-    // if (cachedPost) {
-    //   return sendSuccess(
-    //     res,
-    //     JSON.parse(cachedPost),
-    //     "Posts retrieved successfully (cached)",
-    //     200,
-    //   );
-    // }
+    const cacheKey = `post:${postId}`;
+    const cachedPost = await req.redisClient.get(cacheKey);
 
-    const post = await Post.findById(id);
+    if (cachedPost) {
+      return sendSuccess(
+        res,
+        JSON.parse(cachedPost),
+        "Posts retrieved successfully (cached)",
+        200,
+      );
+    }
+
+    const [post] = await Post.aggregate([
+      { $match: { _id: new mongoose.Types.ObjectId(postId) } },
+      {
+        $lookup: {
+          from: "postmedias",
+          localField: "_id",
+          foreignField: "postId",
+          as: "media",
+        },
+      },
+      {
+        $lookup: {
+          from: "comments",
+          localField: "_id",
+          foreignField: "post",
+          as: "comments",
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "comments.owner",
+          foreignField: "_id",
+          as: "commentUsers",
+        },
+      },
+      {
+        $lookup: {
+          from: "usermedias",
+          localField: "commentUsers._id",
+          foreignField: "user",
+          as: "userMedias",
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "user",
+          foreignField: "_id",
+          as: "postAuthor",
+        },
+      },
+      {
+        $lookup: {
+          from: "usermedias",
+          localField: "user",
+          foreignField: "user",
+          as: "authorMedias",
+        },
+      },
+      {
+        $unwind: {
+          path: "$postAuthor",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $addFields: {
+          "postAuthor.profilePicture": {
+            $let: {
+              vars: {
+                profileMedia: {
+                  $filter: {
+                    input: "$authorMedias",
+                    cond: { $eq: ["$$this.type", "profile"] },
+                  },
+                },
+              },
+              in: { $arrayElemAt: ["$$profileMedia.url", 0] },
+            },
+          },
+          "postAuthor.coverPhoto": {
+            $let: {
+              vars: {
+                coverMedia: {
+                  $filter: {
+                    input: "$authorMedias",
+                    cond: { $eq: ["$$this.type", "cover"] },
+                  },
+                },
+              },
+              in: { $arrayElemAt: ["$$coverMedia.url", 0] },
+            },
+          },
+          comments: {
+            $map: {
+              input: "$comments",
+              as: "comment",
+              in: {
+                $mergeObjects: [
+                  "$$comment",
+                  {
+                    user: {
+                      $let: {
+                        vars: {
+                          user: {
+                            $arrayElemAt: [
+                              {
+                                $filter: {
+                                  input: "$commentUsers",
+                                  cond: { $eq: ["$$this._id", "$$comment.owner"] },
+                                },
+                              },
+                              0,
+                            ],
+                          },
+                          userMedias: {
+                            $filter: {
+                              input: "$userMedias",
+                              cond: { $eq: ["$$this.user", "$$comment.owner"] },
+                            },
+                          },
+                        },
+                        in: {
+                          $mergeObjects: [
+                            "$$user",
+                            {
+                              profilePicture: {
+                                $let: {
+                                  vars: {
+                                    profileMedia: {
+                                      $filter: {
+                                        input: "$$userMedias",
+                                        cond: { $eq: ["$$this.type", "profile"] },
+                                      },
+                                    },
+                                  },
+                                  in: { $arrayElemAt: ["$$profileMedia.url", 0] },
+                                },
+                              },
+                              coverPhoto: {
+                                $let: {
+                                  vars: {
+                                    coverMedia: {
+                                      $filter: {
+                                        input: "$$userMedias",
+                                        cond: { $eq: ["$$this.type", "cover"] },
+                                      },
+                                    },
+                                  },
+                                  in: { $arrayElemAt: ["$$coverMedia.url", 0] },
+                                },
+                              },
+                            },
+                          ],
+                        },
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          content: 1,
+          postType: 1,
+          likesCount: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          mediaUrls: {
+            $reduce: {
+              input: "$media",
+              initialValue: [],
+              in: { $concatArrays: ["$$value", "$$this.urls"] },
+            },
+          },
+          comments: {
+            _id: 1,
+            content: 1,
+            createdAt: 1,
+            user: {
+              _id: 1,
+              username: 1,
+              profilePicture: 1,
+            },
+          },
+          postAuthor: {
+            _id: 1,
+            username: 1,
+            profilePicture: 1,
+          },
+        },
+      },
+    ]);
 
     if (!post) {
-      logger.warn(`Post with ID ${id} not found`);
+      logger.warn(`Post with ID ${postId} not found`);
       return sendError(res, "Post not found", 404);
     }
 
-    let enrichedPost = {};
-    const postMediaFiles = await getPostMediaFilesFromMediaService(id);
-    console.log("DEBUG: postMediaFiles = ", postMediaFiles);
-
-    if (!postMediaFiles) {
-      logger.warn(`Post Media Files not found`);
-      return sendError(res, "Post Media Files not found", 404);
-    }
-
-    const postComments = await fetchPostCommentsFromCommentService(id)
-
-    if (!postComments) {
-      logger.warn(`Post Comments not found`);
-      return sendError(res, "Post Comments not found", 404);
-    }
-
-    const userIds = postComments.data.map((comment) => comment.owner.toString());
-    const userProfiles = await fetchUserProfilesFromUserService(userIds);
-    console.log("DEBUG: userProfiles = ", userProfiles);
-
-    if (!userProfiles) {
-      logger.warn(`User Profiles not found`);
-      return sendError(res, "User Profiles not found", 404);
-    }
-
-    enrichedPost = {
-      ...post.toObject(),
-      media: postMediaFiles,
-      comments: postComments.data.map((comment) => comment.content),
-      users: userProfiles
-    };
     // NOTE: We cache the result for 1 hour as a single post is not expected to change often
-    await req.redisClient.set(cacheKey, JSON.stringify(enrichedPost), "EX", 3600);
+    await req.redisClient.set(cacheKey, JSON.stringify(post), "EX", 3600);
 
-    return sendSuccess(res, enrichedPost, "Post retrieved successfully", 200);
+    return sendSuccess(res, post, "Post retrieved successfully", 200);
 
   } catch (error) {
-    logger.error("Failed to fetch pos media files:", { error });
+    logger.error("Failed to fetch post:", { error });
     return sendError(
       res,
-      error.message || "Failed to fetch post media files",
+      error.message || "Failed to fetch post",
       500,
     );
   }

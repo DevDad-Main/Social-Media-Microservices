@@ -28,7 +28,7 @@ postRouter.post(
   createPost,
 );
 postRouter.get("/get-posts", getPosts);
-postRouter.get("/get-post/:id", getPostById);
+postRouter.get("/get-post/:postId", getPostById);
 postRouter.post("/toggle-post-like/:postId", togglePostLike);
 postRouter.delete("/delete-post/:id", deletePostById);
 
