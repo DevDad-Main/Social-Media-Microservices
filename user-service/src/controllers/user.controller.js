@@ -348,3 +348,34 @@ export const fetchUserById = catchAsync(async (req, res, next) => {
   return sendSuccess(res, profile, "User Profile Fetched", 200);
 });
 //#endregion
+
+//#region Fetch User Profiles
+export const fetchUserProfiles = catchAsync(async (req, res, next) => {
+  try {
+    const { userIds } = req.body;
+
+    console.log("DEBUG: userIds = ", userIds);
+    if (!userIds) {
+      logger.warn("User Ids Not Found");
+      return sendError(res, "User Ids Not Found", 400);
+    }
+
+    if (!Array.isArray(userIds)) {
+      logger.warn("User Ids is not an array");
+      return sendError(res, "User Ids is not an array", 400);
+    }
+
+    const userProfiles = await User.find({ _id: { $in: userIds } }).select("-password");
+
+    if (userProfiles.length === 0) {
+      logger.warn("User Profiles Not Found");
+      return sendError(res, "User Profiles Not Found", 404);
+    }
+
+    return sendSuccess(res, userProfiles, "User Profiles Fetched", 200);
+  } catch (error) {
+    logger.error("Failed to fetch user profiles", { error });
+    return sendError(res, error.message, error.status || 500);
+  }
+})
+//#endregion

@@ -18,6 +18,7 @@ import {
   getPostMediaFilesFromMediaService,
 } from "../utils/postServiceAxiosRequests.utils.js";
 import { fetchPostCommentsFromCommentService } from "../utils/fetchPostCommentsFromCommentService.js";
+import { fetchUserProfilesFromUserService } from "../utils/fetchUserProfilesFromUserService.js";
 
 //#region Create Post
 export const createPost = catchAsync(async (req, res, next) => {
@@ -269,12 +270,19 @@ export const getPostById = catchAsync(async (req, res, next) => {
     }
 
     const userIds = postComments.data.map((comment) => comment.owner.toString());
-    const userProfiles = await;
+    const userProfiles = await fetchUserProfilesFromUserService(userIds);
+    console.log("DEBUG: userProfiles = ", userProfiles);
+
+    if (!userProfiles) {
+      logger.warn(`User Profiles not found`);
+      return sendError(res, "User Profiles not found", 404);
+    }
 
     enrichedPost = {
       ...post.toObject(),
       media: postMediaFiles,
       comments: postComments.data.map((comment) => comment.content),
+      users: userProfiles
     };
     // NOTE: We cache the result for 1 hour as a single post is not expected to change often
     await req.redisClient.set(cacheKey, JSON.stringify(enrichedPost), "EX", 3600);

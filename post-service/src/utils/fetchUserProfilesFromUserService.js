@@ -11,8 +11,8 @@ export const fetchUserProfilesFromUserService = async (userIds) => {
     throw new AppError("User Ids is not valid", 400);
   }
 
-  const res = await axios.get(
-    `${USER_SERVICE_URL}/api/auth/fetch-user-profiles`,
+  const res = await axios.post(
+    `${USER_SERVICE_URL}/api/users/fetch-user-profiles`,
     { userIds }
   );
 
