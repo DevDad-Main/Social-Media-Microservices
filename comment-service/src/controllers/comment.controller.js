@@ -1,8 +1,10 @@
-import { isValidObjectId } from "mongoose";
+import { isValidObjectId } from "mongoose"
 import { Comment } from "../models/Comment.model.js";
 import { catchAsync, logger, sendError, sendSuccess } from "devdad-express-utils";
 import { fetchPostFromPostServiceById } from "../utils/fetchPostById.utils.js";
 import { fetchUserFromUserServiceById } from "../utils/fetcherUserById.utils.js";
+import { clearRedisPostCache, clearRedisPostsCache } from "../utils/cleanRedisCache.utils.js"
+
 
 
 //#region Add Comment
@@ -45,6 +47,16 @@ export const addComment = catchAsync(async (req, res, next) => {
       ...newComment.toObject(),
       user: userResponse,
     };
+
+    try {
+      await Promise.all([
+        clearRedisPostCache(req, postId),
+        clearRedisPostsCache(req),
+      ]);
+    } catch (error) {
+      logger.error(error?.message || "Failed to clear cache", { error });
+      return sendError(res, error?.message || "Failed to clear cache", 500);
+    }
 
     return sendSuccess(res, enrichedComment, "Comment created successfully", 201);
   } catch (error) {
@@ -110,6 +122,16 @@ export const replyToComment = catchAsync(async (req, res, next) => {
       ...newComment.toObject(),
       user: userResponse,
     };
+
+    try {
+      await Promise.all([
+        clearRedisPostCache(req, postId),
+        clearRedisPostsCache(req),
+      ]);
+    } catch (error) {
+      logger.error(error?.message || "Failed to clear cache", { error });
+      return sendError(res, error?.message || "Failed to clear cache", 500);
+    }
 
     return sendSuccess(res, enrichedComment, `Comment added successfully to parent comment: ${parentId}`, 201);
   } catch (error) {

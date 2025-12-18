@@ -337,15 +337,30 @@ export const fetchUserById = catchAsync(async (req, res, next) => {
 
   //NOTE: Fetch user from DB
   const profile = await User.findById(userId).select("-password");
+
   if (!profile) {
     logger.warn("User Not Found");
     return sendError(res, "User Not Found", 404);
   }
 
-  //NOTE: Cache enriched profile
-  await req.redisClient.set(cacheKey, JSON.stringify(profile), "EX", 300); // 5 minutes TTL
+  const userProfilePhoto = await fetchMediaByUserId(userId);
 
-  return sendSuccess(res, profile, "User Profile Fetched", 200);
+  if (!userProfilePhoto) {
+    logger.warn("User Profile Photo Not Found");
+    return sendError(res, "User Profile Photo Not Found", 404);
+  }
+
+  const simplifiedUser = { ...profile.toObject() }
+
+  const enrichedProfile = {
+    username: simplifiedUser.username,
+    profilePhoto: userProfilePhoto.data.type === "profile" ? userProfilePhoto.data.url : null,
+  }
+
+  //NOTE: Cache enriched profile
+  await req.redisClient.set(cacheKey, JSON.stringify(enrichedProfile), "EX", 300); // 5 minutes TTL
+
+  return sendSuccess(res, enrichedProfile, "User Profile Fetched", 200);
 });
 //#endregion
 

@@ -17,7 +17,13 @@ export const fetchUserFromUserServiceById = async (userId) => {
     );
     logger.info("Successfully fetched user", { data: res.data });
 
-    return res.data;
+    const sortedUserData = {
+      username: res.data.data.username,
+      profilePicture: res.data.data.profilePhoto,
+    };
+
+    return sortedUserData;
+    // return res.data;
   } catch (error) {
     logger.error("Failed to fetch user by id", { error: error.message, code: error.code });
     throw new AppError("Failed to fetch user by id", 500);

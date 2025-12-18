@@ -193,7 +193,7 @@ export const getPostWithAggregation = async (postId) => {
         likesCount: 1,
         createdAt: 1,
         updatedAt: 1,
-        
+
         // Flatten media URLs into a simple array
         mediaUrls: {
           $reduce: {
@@ -202,7 +202,7 @@ export const getPostWithAggregation = async (postId) => {
             in: { $concatArrays: ["$$value", "$$this.urls"] },
           },
         },
-        
+
         // Include only necessary comment fields
         comments: {
           _id: 1,
@@ -212,16 +212,14 @@ export const getPostWithAggregation = async (postId) => {
             _id: 1,
             username: 1,
             profilePicture: 1,
-            coverPhoto: 1,
           },
         },
-        
+
         // Include post author info
         postAuthor: {
           _id: 1,
           username: 1,
           profilePicture: 1,
-          coverPhoto: 1,
         },
       },
     },
