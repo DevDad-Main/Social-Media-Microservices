@@ -26,7 +26,7 @@ export const createPost = catchAsync(async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     const errorMessages = errors.array().map((error) => error.msg);
-    logger.warn("New Post Creation Validation Error: ", errorMessages);
+    logger.warn("Create Post Validation Error: ", { errorMessages });
     return sendError(res, errorMessages.join(", "), 400);
   }
 
@@ -276,7 +276,7 @@ export const updatePost = catchAsync(async (req, res, next) => {
 
   if (!errors.isEmpty()) {
     const errorMessages = errors.array().map((error) => error.msg);
-    logger.warn("New Post Creation Validation Error: ", errorMessages);
+    logger.warn("Update Post Validation Error: ", { errorMessages });
     return sendError(res, errorMessages.join(", "), 400);
   }
 

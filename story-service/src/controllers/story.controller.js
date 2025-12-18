@@ -17,12 +17,12 @@ import mongoose from "mongoose";
 
 //#region Add New Story
 export const addStory = catchAsync(async (req, res, next) => {
-  // const errors = validationResult(req);
-  //
-  // if (!errors.isEmpty()) {
-  //   logger.warn("Validation errors in addStory", { errors });
-  //   return sendError(res, "Validation Error", 400, errors.array());
-  // }
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const errorMessages = errors.array().map((error) => error.msg);
+    logger.warn("Add Story Validation Error: ", { errorMessages });
+    return sendError(res, errorMessages.join(", "), 400);
+  }
 
   const userId = req.user._id;
   const { content, mediaType, backgroundColour } = req.body;

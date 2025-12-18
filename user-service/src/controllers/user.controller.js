@@ -30,8 +30,9 @@ export const registerUser = catchAsync(async (req, res, next) => {
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
-    logger.warn("Registration Validation Error: ", errors);
-    return sendError(res, "Registration Validation Error", 400, errors.array());
+    const errorMessages = errors.array().map((error) => error.msg);
+    logger.warn("Registration Validation Error: ", { errorMessages });
+    return sendError(res, errorMessages.join(", "), 400);
   }
 
   let user = await User.findOne({ $or: [{ username }, { email }] });
@@ -69,8 +70,9 @@ export const loginUser = catchAsync(async (req, res, next) => {
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
-    logger.warn("Login Validation Error: ", errors);
-    return sendError(res, "Regisrtation Validation Error", 400, errors.array());
+    const errorMessages = errors.array().map((error) => error.msg);
+    logger.warn("Login Validation Error: ", { errorMessages });
+    return sendError(res, errorMessages.join(", "), 400);
   }
 
   const user = await User.findOne({ email });
@@ -247,8 +249,9 @@ export const updateUserProfile = catchAsync(async (req, res, next) => {
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
-    logger.warn("Registration Validation Error: ", errors.array());
-    return sendError(res, "Registration Validation Error", 400, errors.array());
+    const errorMessages = errors.array().map((error) => error.msg);
+    logger.warn("Update User Profile Validation Error: ", { errorMessages });
+    return sendError(res, errorMessages.join(", "), 400);
   }
   if (!req.user) {
     logger.warn("User Not Found");

@@ -1,4 +1,3 @@
-import { AppError } from "devdad-express-utils";
 import { body } from "express-validator";
 import { validateContent, validateId } from "./safeRegex.utils.js";
 
@@ -11,17 +10,19 @@ export const createCommentValidation = [
     .withMessage("Comment must be between 1 and 500 characters")
     .trim()
     .custom(validateContent),
-    
+
   body("postId")
     .notEmpty()
     .withMessage("Post ID is required")
     .custom(validateId),
-    
+
   body("parentCommentId")
     .optional()
     .custom(validateId)
 ];
+//#endregion
 
+//#region Update Comment Valdiation
 export const updateCommentValidation = [
   body("content")
     .notEmpty()
@@ -32,4 +33,3 @@ export const updateCommentValidation = [
     .custom(validateContent)
 ];
 //#endregion
-

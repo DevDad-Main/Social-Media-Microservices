@@ -8,7 +8,7 @@ const storyRouter = Router();
 
 storyRouter.use(authenticateUserMiddleware);
 
-storyRouter.post("/add-story", upload.single("image"), addStory);
+storyRouter.post("/add-story", upload.single("image"), addStoryValidation, addStory);
 storyRouter.get("/get-stories", getStories);
 storyRouter.delete("/delete/:storyId", deleteStory);
 

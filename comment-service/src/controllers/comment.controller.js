@@ -1,15 +1,21 @@
 import { isValidObjectId } from "mongoose"
 import { Comment } from "../models/Comment.model.js";
 import { catchAsync, logger, sendError, sendSuccess } from "devdad-express-utils";
+import { validationResult } from "express-validator";
 import { fetchPostFromPostServiceById } from "../utils/fetchPostById.utils.js";
 import { fetchUserFromUserServiceById } from "../utils/fetcherUserById.utils.js";
 import { clearRedisPostCache, clearRedisPostsCache } from "../utils/cleanRedisCache.utils.js"
 
-
-
 //#region Add Comment
 export const addComment = catchAsync(async (req, res, next) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      const errorMessages = errors.array().map((error) => error.msg);
+      logger.warn("Add Comment Validation Error: ", { errorMessages });
+      return sendError(res, errorMessages.join(", "), 400);
+    }
+
     logger.info("Adding comment", { url: req.url, body: req.body, params: req.params });
     const { postId } = req.params;
     const { content } = req.body;
@@ -69,6 +75,13 @@ export const addComment = catchAsync(async (req, res, next) => {
 //#region Reply To Comment
 export const replyToComment = catchAsync(async (req, res, next) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      const errorMessages = errors.array().map((error) => error.msg);
+      logger.warn("Reply To Comment Validation Error: ", { errorMessages });
+      return sendError(res, errorMessages.join(", "), 400);
+    }
+
     const { postId } = req.params;
     const { parentId, content } = req.body;
 
@@ -163,5 +176,18 @@ export const fetchCommentsByPost = catchAsync(async (req, res, next) => {
     logger.error("Failed to fetch comments by post", { error });
     return sendError(res, error.message || "Failed to fetch comments by post", 500)
   }
+})
+//#endregion
+
+//#region Update Comment
+export const updateComment = catchAsync(async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const errorMessages = errors.array().map((error) => error.msg);
+    logger.warn("Update Comment Validation Error: ", { errorMessages });
+    return sendError(res, errorMessages.join(", "), 400);
+  }
+
+  const { commentId } = req.body;
 })
 //#endregion

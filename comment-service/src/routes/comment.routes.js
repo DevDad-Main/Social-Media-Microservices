@@ -1,16 +1,17 @@
 import { Router } from "express";
-import { addComment, replyToComment, fetchCommentsByPost } from "../controllers/comment.controller.js";
+import { addComment, replyToComment, fetchCommentsByPost, updateComment } from "../controllers/comment.controller.js";
 import { authenticateUserMiddleware } from "../middleware/auth.middleware.js";
+import { createCommentValidation, updateCommentValidation } from "../utils/validation.utils.js";
 
 const commentRouter = Router();
 
 //NOTE: Internal Service Routes (no auth required)
 commentRouter.get("/fetch-comments-by-post/:postId", fetchCommentsByPost);
 
-
 commentRouter.use(authenticateUserMiddleware);
-commentRouter.post("/add-comment/:postId", addComment);
-commentRouter.post("/add-reply/:postId", replyToComment);
+commentRouter.post("/add-comment/:postId", createCommentValidation, addComment);
+commentRouter.post("/add-reply/:postId", createCommentValidation, replyToComment);
+commentRouter.put("/update-comment/:commentId", updateCommentValidation, updateComment);
 
 // commentRouter.post("/toggle-like", verifyJWT, toggleLike);
 // commentRouter.post("/toggle-dislike", verifyJWT, toggleDislike);
