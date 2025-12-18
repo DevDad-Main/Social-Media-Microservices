@@ -30,6 +30,12 @@ export const updateCommentValidation = [
     .isLength({ min: 1, max: 500 })
     .withMessage("Comment must be between 1 and 500 characters")
     .trim()
-    .custom(validateContent)
+    .custom(validateContent),
+
+  body("commentId")
+    .notEmpty()
+    .withMessage("Comment ID is required")
+    .trim()
+    .custom(validateId)
 ];
 //#endregion
