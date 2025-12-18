@@ -1,20 +1,24 @@
 ### User Service API Endpoints ###
+
+
 ### Register Route
-POST http://localhost:3000/v1/users/register
-content-type: application/json
+
+POST http://localhost:3000/v1/users/register HTTP/1.1
+Content-Type: application/json
 
 {
+  "email": "test2@test.com",
   "firstName": "Hello",
   "lastName": "World",
-  "username": "test2",
-  "email": "test2@test.com",
-  "password": "Abc123!"
+  "password": "Abc123!",
+  "username": "test2"
 }
 
 
 ### Login Route
-POST http://localhost:3000/v1/users/login
-content-type: application/json
+
+POST http://localhost:3000/v1/users/login HTTP/1.1
+Content-Type: application/json
 
 {
   "email": "test2@test.com",
@@ -23,8 +27,9 @@ content-type: application/json
 
 
 ### Refresh Token Route
-POST http://localhost:3000/v1/users/refresh-token
-content-type: application/json
+
+POST http://localhost:3000/v1/users/refresh-token HTTP/1.1
+Content-Type: application/json
 
 {
   "refreshToken": "0cc4bf80964a81ada00259de9c0b51d9bbe2d41690a5d9edefe53d0605c0e6b174f03ccf75006dc5"
@@ -32,11 +37,6 @@ content-type: application/json
 
 
 ### Logout Route
-POST http://localhost:3000/v1/users/logout
-content-type: application/json
 
-
-
-
-
-
+POST http://localhost:3000/v1/users/logout HTTP/1.1
+Content-Type: application/json

@@ -36,7 +36,6 @@ export const addComment = catchAsync(async (req, res, next) => {
     }
 
     const userResponse = await fetchUserFromUserServiceById(req.user._id?.toString());
-
     if (!userResponse) {
       logger.error("Failed to fetch user");
       return sendError(res, "Failed to fetch user", 500);
@@ -130,8 +129,8 @@ export const fetchCommentsByPost = catchAsync(async (req, res, next) => {
       return sendError(res, "Invalid Post ID", 400);
     }
     const comments = await Comment.find({ post: postId })
-    console.log("DEBUG: comments = ", comments);
 
+    console.log("DEBUG: comments = ", comments);
     if (comments.length === 0) {
       logger.warn(`No comments found for post: ${postId}`);
       return sendError(res, "No comments found for post", 404);
