@@ -53,6 +53,19 @@ const commentSchema = new mongoose.Schema({
 });
 
 /**
+ * Mongoose Comment Model - Represents user comments on posts with support for replies and likes
  * @type {import('mongoose').Model<Comment>}
+ * @property {string} content - Comment text content (required)
+ * @property {mongoose.Types.ObjectId} post - ID of post this comment belongs to (required)
+ * @property {mongoose.Types.ObjectId} [owner] - ID of user who wrote the comment
+ * @property {mongoose.Types.ObjectId} [parent] - ID of parent comment (null for top-level)
+ * @property {mongoose.Types.ObjectId[]} replies - Array of reply comment IDs
+ * @property {boolean} isOwner - Whether commenter is post owner (default: false)
+ * @property {number} likes - Number of likes (default: 0)
+ * @property {number} dislikes - Number of dislikes (default: 0)
+ * @property {mongoose.Types.ObjectId[]} likedBy - Array of user IDs who liked this comment
+ * @property {mongoose.Types.ObjectId[]} dislikedBy - Array of user IDs who disliked this comment
+ * @property {Date} createdAt - When comment was created
+ * @property {Date} updatedAt - When comment was last updated
  */
 export const Comment = mongoose.model("Comment", commentSchema);

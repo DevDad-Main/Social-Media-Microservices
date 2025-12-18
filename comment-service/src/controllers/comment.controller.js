@@ -182,6 +182,7 @@ export const fetchCommentsByPost = catchAsync(async (req, res, next) => {
 //#region Update Comment
 export const updateComment = catchAsync(async (req, res, next) => {
   const errors = validationResult(req);
+
   if (!errors.isEmpty()) {
     const errorMessages = errors.array().map((error) => error.msg);
     logger.warn("Update Comment Validation Error: ", { errorMessages });
@@ -189,5 +190,18 @@ export const updateComment = catchAsync(async (req, res, next) => {
   }
 
   const { commentId } = req.body;
+
+  if (!isValidObjectId(commentId)) {
+    logger.error("Invalid MongoDB ObjectId");
+    return sendError(res, "Invalid MongoDB ObjectId", 400);
+  }
+
+  const commentToUpdate = await Comment.findByIdAndUpdate(commentId, {
+    content,
+  })
+
+  Comment.addListener("update.comment", () => {
+    console.log("DEBUG: comment updated");
+  })
 })
 //#endregion
