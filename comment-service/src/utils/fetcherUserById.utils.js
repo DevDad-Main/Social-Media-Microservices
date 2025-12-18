@@ -23,7 +23,6 @@ export const fetchUserFromUserServiceById = async (userId) => {
     };
 
     return sortedUserData;
-    // return res.data;
   } catch (error) {
     logger.error("Failed to fetch user by id", { error: error.message, code: error.code });
     throw new AppError("Failed to fetch user by id", 500);

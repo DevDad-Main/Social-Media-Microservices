@@ -1,12 +1,21 @@
 import { AppError } from "devdad-express-utils";
 import { User } from "../models/User.model.js";
 import { body } from "express-validator";
+import { validateUsername, validateName, validatePassword } from "./safeRegex.utils.js";
 
 //#region Register User Validation
 export const registerUserValidation = [
-  body("firstName").notEmpty().withMessage("First name is required.").trim(),
+  body("firstName")
+    .notEmpty()
+    .withMessage("First name is required.")
+    .trim()
+    .custom(validateName),
 
-  body("lastName").notEmpty().withMessage("Last name is required.").trim(),
+  body("lastName")
+    .notEmpty()
+    .withMessage("Last name is required.")
+    .trim()
+    .custom(validateName),
 
   body("username")
     .notEmpty()
@@ -15,6 +24,7 @@ export const registerUserValidation = [
     .bail()
     .isLength({ min: 5, max: 12 })
     .withMessage("Username must be between 5 and 12 characters.")
+    .custom(validateUsername)
     .custom(async (value) => {
       const user = await User.findOne({ username: value });
       if (user) {
@@ -40,6 +50,7 @@ export const registerUserValidation = [
   body("password")
     .notEmpty()
     .withMessage("Password is required.")
+    .custom(validatePassword)
     .isStrongPassword({
       minLength: 6,
       maxLength: 12,
@@ -77,7 +88,8 @@ export const updateUserValidation = [
   body("fullName")
     .notEmpty()
     .withMessage("Full name is required and cannot be empty!")
-    .trim(),
+    .trim()
+    .custom(validateName),
   body("username")
     .notEmpty()
     .withMessage("Username is required")
@@ -85,6 +97,7 @@ export const updateUserValidation = [
     .bail()
     .isLength({ min: 5, max: 12 })
     .withMessage("Username must be between 5 and 12 characters.")
+    .custom(validateUsername)
     .custom(async (value, { req }) => {
       const loggedInUser = await User.findById(req.user?._id);
       if (loggedInUser.username === value) {
