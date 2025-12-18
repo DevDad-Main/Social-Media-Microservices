@@ -189,7 +189,7 @@ export const updateComment = catchAsync(async (req, res, next) => {
     return sendError(res, errorMessages.join(", "), 400);
   }
 
-  const { commentId } = req.body;
+  const { commentId, content } = req.body;
 
   if (!isValidObjectId(commentId)) {
     logger.error("Invalid MongoDB ObjectId");
@@ -198,10 +198,22 @@ export const updateComment = catchAsync(async (req, res, next) => {
 
   const commentToUpdate = await Comment.findByIdAndUpdate(commentId, {
     content,
-  })
+  }).select("content");
 
-  Comment.addListener("update.comment", () => {
-    console.log("DEBUG: comment updated");
-  })
+  if (!commentToUpdate) {
+    logger.error("Failed to update comment");
+    return sendError(res, "Failed to update comment", 500);
+  }
+
+  return sendSuccess(res, commentToUpdate, "Comment updated successfully", 200);
 })
 //#endregion
+
+//#region Toggle Comment Likes
+export const toggleLike = catchAsync(async (req, res, next) => { })
+//#endregion
+
+//#region Toggle Comment Dislikes
+export const toggleDislike = catchAsync(async (req, res, next) => { })
+//#endregion
+
