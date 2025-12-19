@@ -6,6 +6,8 @@ import {
   updateComment,
   toggleLike,
   toggleDislike,
+  deleteComment,
+  getCommentById,
 } from "../controllers/comment.controller.js";
 import { authenticateUserMiddleware } from "../middleware/auth.middleware.js";
 import {
@@ -32,4 +34,7 @@ commentRouter.put(
 );
 commentRouter.post("/toggle-like/:commentId", toggleLike);
 commentRouter.post("/toggle-dislike/:commentId", toggleDislike);
+commentRouter.delete("/delete-comment/:commentId", deleteComment);
+
+// commentRouter.get("/get-comment/:commentId", getCommentById);
 export default commentRouter;

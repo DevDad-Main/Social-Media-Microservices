@@ -360,3 +360,73 @@ export const toggleDislike = catchAsync(async (req, res, next) => {
   );
 });
 //#endregion
+
+//#region Delete Comment
+export const deleteComment = catchAsync(async (req, res, next) => {
+  const { commentId } = req.params;
+
+  if (!isValidObjectId(commentId)) {
+    logger.error("Invalid MongoDB ObjectId");
+    return sendError(res, "Invalid MongoDB ObjectId", 400);
+  }
+
+  const commentToDelete = await Comment.findByIdAndDelete(commentId);
+
+  if (!commentToDelete) {
+    logger.error("Failed to delete comment || Comment Not Found");
+    return sendError(res, "Failed to delete comment || Comment Not Found", 500);
+  }
+
+  const childrenComments = await Comment.deleteMany({
+    parent: commentToDelete,
+  });
+
+  if (childrenComments.deletedCount === 0) {
+    logger.error(
+      "Failed to delete children comments || No children comments found",
+    );
+    return sendError(
+      res,
+      "Failed to delete children comments || No children comments found",
+      500,
+    );
+  }
+
+  try {
+    await Promise.all([
+      clearRedisPostCache(req, postId),
+      clearRedisPostsCache(req),
+    ]);
+  } catch (error) {
+    logger.error(error?.message || "Failed to clear cache", { error });
+    return sendError(res, error?.message || "Failed to clear cache", 500);
+  }
+
+  return sendSuccess(
+    res,
+    { commentToDelete, childrenComments },
+    "Comment deleted successfully",
+    200,
+  );
+});
+//#endregion
+
+//#region Test Get Comment By ID
+export const getCommentById = catchAsync(async (req, res, next) => {
+  const { commentId } = req.params;
+
+  if (!isValidObjectId(commentId)) {
+    logger.error("Invalid MongoDB ObjectId");
+    return sendError(res, "Invalid MongoDB ObjectId", 400);
+  }
+
+  const comment = await Comment.findById(commentId).populate("replies");
+
+  if (!comment) {
+    logger.error("Comment not found");
+    return sendError(res, "Comment not found", 404);
+  }
+
+  return sendSuccess(res, comment, "Comment retrieved successfully", 200);
+});
+//#endregion
