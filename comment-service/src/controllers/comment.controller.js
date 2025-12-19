@@ -1,10 +1,18 @@
-import { isValidObjectId } from "mongoose"
+import { isValidObjectId } from "mongoose";
 import { Comment } from "../models/Comment.model.js";
-import { catchAsync, logger, sendError, sendSuccess } from "devdad-express-utils";
+import {
+  catchAsync,
+  logger,
+  sendError,
+  sendSuccess,
+} from "devdad-express-utils";
 import { validationResult } from "express-validator";
 import { fetchPostFromPostServiceById } from "../utils/fetchPostById.utils.js";
 import { fetchUserFromUserServiceById } from "../utils/fetcherUserById.utils.js";
-import { clearRedisPostCache, clearRedisPostsCache } from "../utils/cleanRedisCache.utils.js"
+import {
+  clearRedisPostCache,
+  clearRedisPostsCache,
+} from "../utils/cleanRedisCache.utils.js";
 
 //#region Add Comment
 export const addComment = catchAsync(async (req, res, next) => {
@@ -16,7 +24,11 @@ export const addComment = catchAsync(async (req, res, next) => {
       return sendError(res, errorMessages.join(", "), 400);
     }
 
-    logger.info("Adding comment", { url: req.url, body: req.body, params: req.params });
+    logger.info("Adding comment", {
+      url: req.url,
+      body: req.body,
+      params: req.params,
+    });
     const { postId } = req.params;
     const { content } = req.body;
 
@@ -43,7 +55,9 @@ export const addComment = catchAsync(async (req, res, next) => {
       return sendError(res, "Failed to create comment", 500);
     }
 
-    const userResponse = await fetchUserFromUserServiceById(req.user._id?.toString());
+    const userResponse = await fetchUserFromUserServiceById(
+      req.user._id?.toString(),
+    );
     if (!userResponse) {
       logger.error("Failed to fetch user");
       return sendError(res, "Failed to fetch user", 500);
@@ -64,12 +78,17 @@ export const addComment = catchAsync(async (req, res, next) => {
       return sendError(res, error?.message || "Failed to clear cache", 500);
     }
 
-    return sendSuccess(res, enrichedComment, "Comment created successfully", 201);
+    return sendSuccess(
+      res,
+      enrichedComment,
+      "Comment created successfully",
+      201,
+    );
   } catch (error) {
     logger.error("Failed to create comment", { error });
     return sendError(res, error.message || "Failed to create comment", 500);
   }
-})
+});
 //#endregion
 
 //#region Reply To Comment
@@ -106,9 +125,8 @@ export const replyToComment = catchAsync(async (req, res, next) => {
       content,
       post: postResponse.data.postId,
       owner: req.user._id,
-      parent: parentId
-    })
-
+      parent: parentId,
+    });
 
     if (!newComment) {
       logger.error("Failed to create comment");
@@ -116,15 +134,24 @@ export const replyToComment = catchAsync(async (req, res, next) => {
     }
 
     const recipientsComment = await Comment.findByIdAndUpdate(parentId, {
-      $addToSet: { replies: newComment._id }
-    })
+      $addToSet: { replies: newComment._id },
+    });
 
     if (!recipientsComment) {
-      logger.error("Failed to add comment to parent comment  || Parent comment not found", { parentId });
-      return sendError(res, "Failed to add comment to parent comment  || Parent comment not found", 500);
+      logger.error(
+        "Failed to add comment to parent comment  || Parent comment not found",
+        { parentId },
+      );
+      return sendError(
+        res,
+        "Failed to add comment to parent comment  || Parent comment not found",
+        500,
+      );
     }
 
-    const userResponse = await fetchUserFromUserServiceById(newComment.owner.toString())
+    const userResponse = await fetchUserFromUserServiceById(
+      newComment.owner.toString(),
+    );
 
     if (!userResponse) {
       logger.error("Failed to fetch user");
@@ -146,12 +173,17 @@ export const replyToComment = catchAsync(async (req, res, next) => {
       return sendError(res, error?.message || "Failed to clear cache", 500);
     }
 
-    return sendSuccess(res, enrichedComment, `Comment added successfully to parent comment: ${parentId}`, 201);
+    return sendSuccess(
+      res,
+      enrichedComment,
+      `Comment added successfully to parent comment: ${parentId}`,
+      201,
+    );
   } catch (error) {
     logger.error("Failed to add comment", { error });
     return sendError(res, error.message || "Failed to add comment", 500);
   }
-})
+});
 //#endregion
 
 //#region Fetch Comments By postId
@@ -163,7 +195,7 @@ export const fetchCommentsByPost = catchAsync(async (req, res, next) => {
       logger.warn(`Invalid Post ID: ${postId}`);
       return sendError(res, "Invalid Post ID", 400);
     }
-    const comments = await Comment.find({ post: postId })
+    const comments = await Comment.find({ post: postId });
 
     console.log("DEBUG: comments = ", comments);
     if (comments.length === 0) {
@@ -174,9 +206,13 @@ export const fetchCommentsByPost = catchAsync(async (req, res, next) => {
     return sendSuccess(res, comments, "Comments retrieved successfully", 200);
   } catch (error) {
     logger.error("Failed to fetch comments by post", { error });
-    return sendError(res, error.message || "Failed to fetch comments by post", 500)
+    return sendError(
+      res,
+      error.message || "Failed to fetch comments by post",
+      500,
+    );
   }
-})
+});
 //#endregion
 
 //#region Update Comment
@@ -198,22 +234,129 @@ export const updateComment = catchAsync(async (req, res, next) => {
 
   const commentToUpdate = await Comment.findByIdAndUpdate(commentId, {
     content,
-  }).select("content");
+  }).select("content post");
 
   if (!commentToUpdate) {
     logger.error("Failed to update comment");
     return sendError(res, "Failed to update comment", 500);
   }
 
+  try {
+    await Promise.all([
+      clearRedisPostCache(req, commentToUpdate.post),
+      clearRedisPostsCache(req),
+    ]);
+  } catch (error) {
+    logger.error(error?.message || "Failed to clear cache", { error });
+    return sendError(res, error?.message || "Failed to clear cache", 500);
+  }
+
   return sendSuccess(res, commentToUpdate, "Comment updated successfully", 200);
-})
+});
 //#endregion
 
 //#region Toggle Comment Likes
-export const toggleLike = catchAsync(async (req, res, next) => { })
+export const toggleLike = catchAsync(async (req, res, next) => {
+  const userId = req.user?._id;
+  const { commentId } = req.params;
+
+  const updatedComment = await Comment.findByIdAndUpdate(
+    commentId,
+    [
+      {
+        $set: {
+          likes: {
+            $cond: {
+              if: { $in: [userId, "$likes"] },
+              then: {
+                $filter: {
+                  input: "$likes",
+                  cond: { $ne: ["$$this", userId] },
+                },
+              },
+              else: { $concatArrays: ["$likes", [userId]] },
+            },
+          },
+        },
+      },
+    ],
+    {
+      new: true,
+      runValidators: true,
+      updatePipeline: true,
+    },
+  );
+
+  if (!updatedComment) {
+    logger.warn(`Comment Not Found: ${commentId}`);
+    return sendError(res, "Comment Not Found", 404);
+  }
+
+  const isLiked = updatedComment.likes.some(
+    (id) => id.toString() === userId.toString(),
+  );
+
+  const message = isLiked
+    ? "Comment like added successfully"
+    : "Comment like removed successfully";
+
+  return sendSuccess(
+    res,
+    { isLiked, likes: updatedComment.likes.length },
+    message,
+  );
+});
 //#endregion
 
 //#region Toggle Comment Dislikes
-export const toggleDislike = catchAsync(async (req, res, next) => { })
-//#endregion
+export const toggleDislike = catchAsync(async (req, res, next) => {
+  const userId = req.user?._id;
+  const { commentId } = req.params;
 
+  const updatedComment = await Comment.findByIdAndUpdate(
+    commentId,
+    [
+      {
+        $set: {
+          dislikes: {
+            $cond: {
+              if: { $in: [userId, "$dislikes"] },
+              then: {
+                $filter: {
+                  input: "$dislikes",
+                  cond: { $ne: ["$$this", userId] },
+                },
+              },
+              else: { $concatArrays: ["$dislikes", [userId]] },
+            },
+          },
+        },
+      },
+    ],
+    {
+      new: true,
+      runValidators: true,
+      updatePipeline: true,
+    },
+  );
+
+  if (!updatedComment) {
+    logger.warn(`Comment Not Found: ${commentId}`);
+    return sendError(res, "Comment Not Found", 404);
+  }
+
+  const isDisliked = updatedComment.dislikes.some(
+    (id) => id.toString() === userId.toString(),
+  );
+
+  const message = isDisliked
+    ? "Comment dislike added successfully"
+    : "Comment dislike removed successfully";
+
+  return sendSuccess(
+    res,
+    { isDisliked, dislikes: updatedComment.dislikes.length },
+    message,
+  );
+});
+//#endregion

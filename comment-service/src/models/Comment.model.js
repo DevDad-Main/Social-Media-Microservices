@@ -15,42 +15,47 @@ import mongoose from "mongoose";
  * @property {Date} createdAt - When comment was created
  * @property {Date} updatedAt - When comment was last updated
  */
-const commentSchema = new mongoose.Schema({
-  content: {
-    type: String,
-    required: true,
+const commentSchema = new mongoose.Schema(
+  {
+    content: {
+      type: String,
+      required: true,
+    },
+    post: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+    },
+    owner: {
+      type: mongoose.Schema.Types.ObjectId,
+    },
+    parent: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Comment",
+      default: null, //NOTE: null = top level, otherwise it's a reply
+    },
+    replies: [{ type: mongoose.Schema.Types.ObjectId, ref: "Comment" }],
+    isOwner: {
+      type: Boolean,
+      default: false,
+    },
+    likes: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+      },
+    ],
+    dislikes: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+      },
+    ],
+    // So we can keep a track of who liked it, as above we are usuing numbers for likes, not an easy way to track if user already liked
+    likedBy: [{ type: mongoose.Schema.Types.ObjectId }],
+    dislikedBy: [{ type: mongoose.Schema.Types.ObjectId }],
   },
-  post: {
-    type: mongoose.Schema.Types.ObjectId,
-    required: true,
+  {
+    timestamps: true,
   },
-  owner: {
-    type: mongoose.Schema.Types.ObjectId,
-  },
-  parent: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Comment",
-    default: null, //NOTE: null = top level, otherwise it's a reply
-  },
-  replies: [{ type: mongoose.Schema.Types.ObjectId, ref: "Comment" }],
-  isOwner: {
-    type: Boolean,
-    default: false,
-  },
-  likes: {
-    type: Number,
-    default: 0
-  },
-  dislikes: {
-    type: Number,
-    default: 0
-  },
-  // So we can keep a track of who liked it, as above we are usuing numbers for likes, not an easy way to track if user already liked
-  likedBy: [{ type: mongoose.Schema.Types.ObjectId }],
-  dislikedBy: [{ type: mongoose.Schema.Types.ObjectId }],
-}, {
-  timestamps: true,
-});
+);
 
 /**
  * Mongoose Comment Model - Represents user comments on posts with support for replies and likes

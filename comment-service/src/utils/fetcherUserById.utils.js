@@ -10,10 +10,13 @@ export const fetchUserFromUserServiceById = async (userId) => {
   }
 
   try {
-    logger.info("Attempting to fetch user", { userId, url: `${USER_SERVICE_URL}/api/users/fetch-user/${userId}` });
+    logger.info("Attempting to fetch user", {
+      userId,
+      url: `${USER_SERVICE_URL}/api/users/fetch-user/${userId}`,
+    });
     const res = await axios.get(
       `${USER_SERVICE_URL}/api/users/fetch-user/${userId}`,
-      { timeout: 5000 } // 5 second timeout
+      { timeout: 5000 }, // 5 second timeout
     );
     logger.info("Successfully fetched user", { data: res.data });
 
@@ -24,7 +27,10 @@ export const fetchUserFromUserServiceById = async (userId) => {
 
     return sortedUserData;
   } catch (error) {
-    logger.error("Failed to fetch user by id", { error: error.message, code: error.code });
+    logger.error("Failed to fetch user by id", {
+      error: error.message,
+      code: error.code,
+    });
     throw new AppError("Failed to fetch user by id", 500);
   }
 };

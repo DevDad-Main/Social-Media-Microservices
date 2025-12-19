@@ -10,15 +10,6 @@ export const createCommentValidation = [
     .withMessage("Comment must be between 1 and 500 characters")
     .trim()
     .custom(validateContent),
-
-  body("postId")
-    .notEmpty()
-    .withMessage("Post ID is required")
-    .custom(validateId),
-
-  body("parentCommentId")
-    .optional()
-    .custom(validateId)
 ];
 //#endregion
 
