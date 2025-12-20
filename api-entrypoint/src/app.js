@@ -117,7 +117,10 @@ app.use(
     ...proxyOptions,
     // NOTE: Allows us to overwrite certain Request Options before proxying
     proxyReqOptDecorator: (proxyReqOptions, srcReq) => {
-      if (!srcReq.headers["content-type"] || !srcReq.headers["content-type"].startsWith("multipart/form-data")) {
+      if (
+        !srcReq.headers["content-type"] ||
+        !srcReq.headers["content-type"].startsWith("multipart/form-data")
+      ) {
         proxyReqOptions.headers["content-type"] = "application/json";
       }
       proxyReqOptions.headers["x-user-id"] = srcReq.user._id;
@@ -141,7 +144,10 @@ app.use(
     ...proxyOptions,
     // NOTE: Allows us to overwrite certain Request Options before proxying
     proxyReqOptDecorator: (proxyReqOptions, srcReq) => {
-      if (!srcReq.headers["content-type"] || !srcReq.headers["content-type"].startsWith("multipart/form-data")) {
+      if (
+        !srcReq.headers["content-type"] ||
+        !srcReq.headers["content-type"].startsWith("multipart/form-data")
+      ) {
         proxyReqOptions.headers["content-type"] = "application/json";
       }
       proxyReqOptions.headers["x-user-id"] = srcReq.user._id;
@@ -166,7 +172,10 @@ app.use(
     // NOTE: Allows us to overwrite certain Request Options before proxying
     proxyReqOptDecorator: (proxyReqOptions, srcReq) => {
       proxyReqOptions.headers["x-user-id"] = srcReq.user._id;
-      if (!srcReq.headers["content-type"] || !srcReq.headers["content-type"].startsWith("multipart/form-data")) {
+      if (
+        !srcReq.headers["content-type"] ||
+        !srcReq.headers["content-type"].startsWith("multipart/form-data")
+      ) {
         proxyReqOptions.headers["content-type"] = "application/json";
       }
       return proxyReqOptions;
@@ -219,6 +228,27 @@ app.use(
     userResDecorator: (proxyRes, proxyResData, userReq, userRes) => {
       logger.info(
         `Response Received from Comment Service: ${proxyRes.statusCode}`,
+      );
+      return proxyResData;
+    },
+  }),
+);
+//#endregion
+
+//#region Notifications Proxy
+app.use(
+  "/v1/notifications",
+  validateUserToken,
+  proxy(process.env.NOTIFICATION_SERVICE_URL, {
+    ...proxyOptions,
+    // NOTE: Allows us to overwrite certain Request Options before proxying
+    proxyReqOptDecorator: (proxyReqOptions, srcReq) => {
+      proxyReqOptions.headers["content-type"] = "application/json";
+      return proxyReqOptions;
+    },
+    userResDecorator: (proxyRes, proxyResData, userReq, userRes) => {
+      logger.info(
+        `Response Received from Notification Service: ${proxyRes.statusCode}`,
       );
       return proxyResData;
     },

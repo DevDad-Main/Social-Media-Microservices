@@ -113,11 +113,26 @@ services:
       NODE_ENV: development
       REDIS_URL: redis://redis:6379
       RABBITMQ_URL: amqp://rabbitmq:5672
-      USER_SERVICE_URL: http://user-service:3001
-      POST_SERVICE_URL: http://post-service:3002
+      # USER_SERVICE_URL: http://user-service:3001
+      # POST_SERVICE_URL: http://post-service:3002
     volumes:
       - ./comment-service/src:/usr/src/app/src
 
+  notification-service:
+    build: ./notification-service
+    env_file:
+      - ./notification-service/.env
+    depends_on:
+      - redis
+      - rabbitmq
+    environment:
+      NODE_ENV: development
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://rabbitmq:5672
+      # USER_SERVICE_URL: http://user-service:3001
+      # POST_SERVICE_URL: http://post-service:3002
+    volumes:
+      - ./notification-service/src:/usr/src/app/src
 
   redis:
     image: redis:alpine

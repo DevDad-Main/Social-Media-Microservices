@@ -353,15 +353,24 @@ export const fetchUserById = catchAsync(async (req, res, next) => {
     return sendError(res, "User Profile Photo Not Found", 404);
   }
 
-  const simplifiedUser = { ...profile.toObject() }
+  const simplifiedUser = { ...profile.toObject() };
 
   const enrichedProfile = {
+    fullName: simplifiedUser.fullName,
     username: simplifiedUser.username,
-    profilePhoto: userProfilePhoto.data.type === "profile" ? userProfilePhoto.data.url : null,
-  }
+    profilePhoto:
+      userProfilePhoto.data.type === "profile"
+        ? userProfilePhoto.data.url
+        : null,
+  };
 
   //NOTE: Cache enriched profile
-  await req.redisClient.set(cacheKey, JSON.stringify(enrichedProfile), "EX", 300); // 5 minutes TTL
+  await req.redisClient.set(
+    cacheKey,
+    JSON.stringify(enrichedProfile),
+    "EX",
+    300,
+  ); // 5 minutes TTL
 
   return sendSuccess(res, enrichedProfile, "User Profile Fetched", 200);
 });
@@ -383,7 +392,9 @@ export const fetchUserProfiles = catchAsync(async (req, res, next) => {
       return sendError(res, "User Ids is not an array", 400);
     }
 
-    const userProfiles = await User.find({ _id: { $in: userIds } }).select("-password");
+    const userProfiles = await User.find({ _id: { $in: userIds } }).select(
+      "-password",
+    );
 
     if (userProfiles.length === 0) {
       logger.warn("User Profiles Not Found");
@@ -395,5 +406,5 @@ export const fetchUserProfiles = catchAsync(async (req, res, next) => {
     logger.error("Failed to fetch user profiles", { error });
     return sendError(res, error.message, error.status || 500);
   }
-})
+});
 //#endregion
