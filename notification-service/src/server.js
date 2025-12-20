@@ -6,7 +6,6 @@ await connectDB();
 
 (async () => {
   try {
-
     app.listen(process.env.PORT || 3007, () => {
       logger.info(
         `Notification Service is running on port ${process.env.PORT || 3007}`,

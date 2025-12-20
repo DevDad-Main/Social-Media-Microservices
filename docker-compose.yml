@@ -14,6 +14,7 @@ services:
       - search-service
       - story-service
       - comment-service
+      - notification-service
     environment:
       NODE_ENV: development
       REDIS_URL: redis://redis:6379
@@ -24,6 +25,7 @@ services:
       SEARCH_SERVICE_URL: http://search-service:3004
       STORY_SERVICE_URL: http://story-service:3005
       COMMENT_SERVICE_URL: http://comment-service:3006
+      NOTIFICATION_SERVICE_URL: http://notification-service:3007
     volumes:
       - ./api-entrypoint/src:/usr/src/app/src
 

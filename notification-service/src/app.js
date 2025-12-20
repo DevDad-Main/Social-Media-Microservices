@@ -7,6 +7,7 @@ import Redis from "ioredis";
 import RedisStore from "rate-limit-redis";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import notificationRouter from "./routes/notification.routes.js";
 
 //#region Constants
 const app = express();
@@ -59,6 +60,7 @@ app.use(
     req.redisClient = redisClient;
     next();
   },
+  notificationRouter,
 );
 //#endregion
 
