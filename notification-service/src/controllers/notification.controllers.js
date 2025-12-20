@@ -1,26 +1,14 @@
 import { catchAsync, sendSuccess } from "devdad-express-utils";
 import { Notification } from "../models/Notification.model.js";
-import { fetchUserFromUserServiceById } from "../utils/fetcherUserById.utils.js";
+import mongoose from "mongoose";
 
 //#region Get All Notifications For A User
 export const getNotifications = catchAsync(async (req, res, next) => {
   const userId = req.user?._id;
 
-  // const notifications = await Notification.find({ user: userId });
-
-  // if (notifications.length === 0) {
-  //   logger.warn("No Notifications Found");
-  //   return sendSuccess(res, [], "No Notifications Found", 200);
-  // }
-  //
-  // //TODO: internal user call to fetch the user
-  // const fromUser = await fetchUserFromUserServiceById(
-  //   notifications.from.toString(),
-  // );
-
   const notifications = await Notification.aggregate([
     {
-      $match: { user: userId },
+      $match: { user: new mongoose.Types.ObjectId(userId) },
     },
     {
       $lookup: {
@@ -33,13 +21,13 @@ export const getNotifications = catchAsync(async (req, res, next) => {
     {
       $lookup: {
         from: "usermedias",
-        localField: "fromUser._id",
+        localField: "from",
         foreignField: "user",
         as: "fromUserMedias",
       },
     },
     {
-      $unwind: "$fromUser",
+      $unwind: { path: "$fromUser", preserveNullAndEmptyArrays: true },
     },
     {
       $addFields: {
@@ -60,6 +48,9 @@ export const getNotifications = catchAsync(async (req, res, next) => {
     },
     {
       $project: {
+        type: 1,
+        entityId: 1,
+        read: 1,
         fromUser: {
           username: 1,
           fullName: 1,
@@ -70,9 +61,11 @@ export const getNotifications = catchAsync(async (req, res, next) => {
     },
   ]);
 
+  console.log("DEBUG: notifications", notifications);
+
   return sendSuccess(
     res,
-    notifications,
+    { notificationCount: notifications.length, notifications },
     "Notifications retrieved successfully",
     200,
   );
