@@ -1,4 +1,4 @@
-import mongoose, { isValidObjectId, ObjectId } from "mongoose";
+import { isValidObjectId } from "mongoose";
 import { validationResult } from "express-validator";
 import { Post } from "../models/Post.model.js";
 import {
@@ -258,14 +258,9 @@ export const getPostById = catchAsync(async (req, res, next) => {
     await req.redisClient.set(cacheKey, JSON.stringify(post), "EX", 3600);
 
     return sendSuccess(res, post, "Post retrieved successfully", 200);
-
   } catch (error) {
     logger.error("Failed to fetch post:", { error });
-    return sendError(
-      res,
-      error.message || "Failed to fetch post",
-      500,
-    );
+    return sendError(res, error.message || "Failed to fetch post", 500);
   }
 });
 //#endregion
@@ -372,17 +367,18 @@ export const togglePostLike = catchAsync(async (req, res, next) => {
   const isLiked = updatedPost.likesCount.some(
     (id) => id.toString() === loggedInUserId.toString(),
   );
-  const message = isLiked
-    ? "Post like added successfully"
-    : "Post like removed successfully";
 
   //TODO: Add a consumer at the other end. Not sure if we need anything to cosume this event but we will see.
   await publishRabbitMQEvent("post.liked", {
-    postId: updatedPost._id.toString(),
-    userId: loggedInUserId.toString(),
-    isLiked,
-    likesCount: updatedPost.likesCount.length,
+    user: updatedPost.user,
+    from: loggedInUserId,
+    type: "like",
+    entityId: updatedPost._id,
   });
+
+  const message = isLiked
+    ? "Post like added successfully"
+    : "Post like removed successfully";
 
   try {
     await Promise.all([
@@ -400,7 +396,6 @@ export const togglePostLike = catchAsync(async (req, res, next) => {
 //#region Fetch Post By Id
 export const fetchPostById = catchAsync(async (req, res, next) => {
   try {
-
     const { postId } = req.params;
 
     if (!isValidObjectId(postId)) {
@@ -415,7 +410,12 @@ export const fetchPostById = catchAsync(async (req, res, next) => {
       return sendError(res, "Post Not Found", 404);
     }
 
-    return sendSuccess(res, { postId: post._id.toString() }, "Post retrieved successfully", 200);
+    return sendSuccess(
+      res,
+      { postId: post._id.toString() },
+      "Post retrieved successfully",
+      200,
+    );
   } catch (error) {
     logger.error("Failed to fetch post by id", { error });
     return sendError(res, "Failed to fetch post by id", 500);

@@ -1,11 +1,17 @@
 import "dotenv/config";
 import { connectDB, getDBStatus, logger } from "devdad-express-utils";
 import { app } from "./app.js";
+import { consumeEvent, initializeRabbitMQ } from "./utils/rabbitmq.utils.js";
+import { handlePostLikedEvent } from "./eventHandlers/post.liked.eventHandler.js";
 
 await connectDB();
 
 (async () => {
   try {
+    await initializeRabbitMQ();
+
+    await consumeEvent("post.liked", handlePostLikedEvent);
+
     app.listen(process.env.PORT || 3007, () => {
       logger.info(
         `Notification Service is running on port ${process.env.PORT || 3007}`,
