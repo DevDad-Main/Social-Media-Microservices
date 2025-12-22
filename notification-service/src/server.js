@@ -2,7 +2,10 @@ import "dotenv/config";
 import { connectDB, getDBStatus, logger } from "devdad-express-utils";
 import { app } from "./app.js";
 import { consumeEvent, initializeRabbitMQ } from "./utils/rabbitmq.utils.js";
-import { handlePostLikedEvent } from "./eventHandlers/post.liked.eventHandler.js";
+import {
+  handlePostLikedEvent,
+  handleCommentCreatedEvent,
+} from "./eventHandlers/notification.eventHandler.js";
 
 await connectDB();
 
@@ -11,6 +14,7 @@ await connectDB();
     await initializeRabbitMQ();
 
     await consumeEvent("post.liked", handlePostLikedEvent);
+    await consumeEvent("comment.created", handleCommentCreatedEvent);
 
     app.listen(process.env.PORT || 3007, () => {
       logger.info(

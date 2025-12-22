@@ -14,7 +14,7 @@ notificationRouter.use(authenticateUserMiddleware);
 notificationRouter.get("/get-all", getNotifications);
 notificationRouter.post("/read/:notificationId", markNotificationAsRead);
 
-notificationRouter.delete("/delete/:id", deleteNotification);
+notificationRouter.delete("/delete/:notificationId", deleteNotification);
 notificationRouter.delete("/clear-all", clearAllNotifications);
 
 export default notificationRouter;

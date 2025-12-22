@@ -69,6 +69,12 @@ export const getNotifications = catchAsync(async (req, res, next) => {
         createdAt: 1,
       },
     },
+    {
+      $sort: { createdAt: -1 },
+    },
+    {
+      $limit: 10,
+    },
   ]);
 
   logger.info("DEBUG: notifications", { notifications });

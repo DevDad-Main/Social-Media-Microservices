@@ -412,7 +412,7 @@ export const fetchPostById = catchAsync(async (req, res, next) => {
 
     return sendSuccess(
       res,
-      { postId: post._id.toString() },
+      { postId: post._id.toString(), user: post.user },
       "Post retrieved successfully",
       200,
     );

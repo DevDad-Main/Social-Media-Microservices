@@ -13,6 +13,7 @@ import {
   clearRedisPostCache,
   clearRedisPostsCache,
 } from "../utils/cleanRedisCache.utils.js";
+import { publishEvent as publishRabbitMQEvent } from "../utils/rabbitmq.utils.js";
 
 //#region Add Comment
 export const addComment = catchAsync(async (req, res, next) => {
@@ -55,9 +56,7 @@ export const addComment = catchAsync(async (req, res, next) => {
       return sendError(res, "Failed to create comment", 500);
     }
 
-    const userResponse = await fetchUserFromUserServiceById(
-      req.user._id?.toString(),
-    );
+    const userResponse = await fetchUserFromUserServiceById(req.user._id);
     if (!userResponse) {
       logger.error("Failed to fetch user");
       return sendError(res, "Failed to fetch user", 500);
@@ -76,6 +75,17 @@ export const addComment = catchAsync(async (req, res, next) => {
     } catch (error) {
       logger.error(error?.message || "Failed to clear cache", { error });
       return sendError(res, error?.message || "Failed to clear cache", 500);
+    }
+
+    try {
+      await publishRabbitMQEvent("comment.created", {
+        user: postResponse.data.user,
+        from: newComment.owner,
+        type: "comment",
+        entityId: postResponse.data.postId,
+      });
+    } catch (error) {
+      logger.error("Failed to publish comment created event", { error });
     }
 
     return sendSuccess(
