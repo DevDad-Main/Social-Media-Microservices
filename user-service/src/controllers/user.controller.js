@@ -413,9 +413,14 @@ export const fetchUserProfiles = catchAsync(async (req, res, next) => {
 //#endregion
 
 //#region Connection Controllers
+
+//#region Send Connection Request
 export const sendConnectionRequest = catchAsync(async (req, res, next) => {
   const userId = req.user._id;
   const { id } = req.body;
+
+  if (!isValidObjectId(userId)) return sendError(res, "Invalid user ID", 400);
+  if (!isValidObjectId(id)) return sendError(res, "Invalid user ID", 400);
 
   const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
@@ -467,4 +472,153 @@ export const sendConnectionRequest = catchAsync(async (req, res, next) => {
 
   return sendSuccess(res, {}, "Connection Request Pending", 200);
 });
+//#endregion
+
+//#region Accept Connection Request
+export const acceptConnectionRequests = catchAsync(async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    const { id } = req.body;
+
+    if (!isValidObjectId(userId)) return sendError(res, "Invalid user ID", 400);
+    if (!isValidObjectId(id)) return sendError(res, "Invalid user ID", 400);
+
+    const connection = await Connection.findOne({
+      from_user_id: id,
+      to_user_id: userId,
+    });
+
+    if (!connection) {
+      logger.warn("Connection Not Found");
+      return sendError(res, "Connection Not Found", 404);
+    }
+
+    // add to logged in user "connections" (no duplicates thanks to $addToSet)
+    await User.findByIdAndUpdate(userId, {
+      $addToSet: { connections: id },
+    });
+
+    // add to "other users connections"
+    await User.findByIdAndUpdate(id, {
+      $addToSet: { connections: userId },
+    });
+
+    await Connection.findByIdAndUpdate(connection._id, {
+      $set: { status: "accepted" },
+    });
+  } catch (error) {
+    logger.error("Failed to accept connection", { error });
+    return sendError(res, error.message, error.status || 500, { error });
+  }
+});
+//#endregion
+
+//#region Get User Connections
+export const getUserConnections = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    if (!isValidObjectId(userId)) return sendError(res, "Invalid user ID", 400);
+
+    const user = await User.findById(userId).populate(
+      "connections followers following",
+    );
+
+    if (!user) {
+      logger.warn(`User Not Found: ${userId}`);
+      return sendError(res, `User Not Found: ${userId}`, 404);
+    }
+
+    const { connections, followers, following } = user;
+
+    const pendingConnections = (
+      await Connection.find({ to_user_id: userId, status: "pending" }).populate(
+        "from_user_id",
+      )
+    ).map((connection) => connection.from_user_id);
+
+    if (pendingConnections.length === 0) {
+      logger.warn("No pending connections found || Something Went Wrong");
+      return sendSuccess(
+        res,
+        { connections, followers, following },
+        "User Connections Successfully Fetched",
+        200,
+      );
+    }
+
+    console.log(connections, followers, following, pendingConnections);
+
+    return sendSuccess(
+      res,
+      { connections, followers, following, pendingConnections },
+      "User Connections Successfully Fetched",
+      200,
+    );
+  } catch (error) {
+    logger.error("Failed to get user connections", { error });
+    return sendError(res, error.message, error.status || 500, { error });
+  }
+};
+//#endregion
+//#endregion
+
+//#region Follow User
+export const followUser = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { id } = req.body;
+
+    if (!isValidObjectId(userId)) return sendError(res, "Invalid user ID", 400);
+    if (!isValidObjectId(id)) return sendError(res, "Invalid user ID", 400);
+
+    //NOTE: Sanity check but we can handle this on the frontend by filtering out ourself
+    if (userId.toString() === id.toString()) {
+      logger.warn("Cannot follow yourself");
+      return sendError(res, "Cannot follow yourself", 400);
+    }
+
+    // add to "following" (no duplicates thanks to $addToSet)
+    await User.findByIdAndUpdate(userId, {
+      $addToSet: { following: id },
+    });
+
+    // add to "followers"
+    await User.findByIdAndUpdate(id, {
+      $addToSet: { followers: userId },
+    });
+
+    return sendSuccess(res, {}, "User Successfully Followed", 200);
+  } catch (error) {
+    logger.error("Failed to follow user", { error });
+    return sendError(res, error.message, error.status || 500, { error });
+  }
+};
+//#endregion
+
+//#region Unfollow User
+export const unfollowUser = async (req, res) => {
+  try {
+    const userId = req.user?._id;
+    const { id } = req.body;
+
+    if (!isValidObjectId(userId)) return sendError(res, "Invalid user ID", 400);
+    if (!isValidObjectId(id)) return sendError(res, "Invalid user ID", 400);
+
+    // Remove unfollowed user from your following
+    await User.findByIdAndUpdate(userId, {
+      $pull: { following: id },
+    });
+
+    // Remove you from their followers
+    await User.findByIdAndUpdate(id, {
+      $pull: { followers: userId },
+    });
+
+    return sendSuccess(res, {}, "User Successfully Unfollowed", 200);
+  } catch (error) {
+    logger.error("Failed to unfollow user", { error });
+    return sendError(res, error.message, error.status || 500, { error });
+  }
+};
 //#endregion
