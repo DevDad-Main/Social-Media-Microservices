@@ -15,6 +15,9 @@ import {
   clearRedisUsersSearchCache,
 } from "../utils/cleanRedisCache.utils.js";
 import { publishEvent as publishRabbitMQEvent } from "../utils/rabbitmq.utils.js";
+import { Connection } from "../models/Connection.model.js";
+
+const MAX_CONNECTION_REQUESTS = 2;
 
 //#region Constants
 const HTTP_OPTIONS = {
@@ -406,5 +409,62 @@ export const fetchUserProfiles = catchAsync(async (req, res, next) => {
     logger.error("Failed to fetch user profiles", { error });
     return sendError(res, error.message, error.status || 500);
   }
+});
+//#endregion
+
+//#region Connection Controllers
+export const sendConnectionRequest = catchAsync(async (req, res, next) => {
+  const userId = req.user._id;
+  const { id } = req.body;
+
+  const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+  const connectionRequests = await Connection.find({
+    from_user_id: userId,
+    createdAt: { $gte: last24Hours },
+  });
+
+  //NOTE: No magic numbers, this would be configurable dependdant on customer needs
+  if (connectionRequests.length > MAX_CONNECTION_REQUESTS) {
+    logger.warn("Connection Request Limit Reached");
+    return sendError(res, "Connection Request Limit Reached", 400);
+  }
+
+  // Check if users are already connected
+  const connection = await Connection.findOne({
+    $or: [
+      { from_user_id: userId, to_user_id: id },
+      { from_user_id: id, to_user_id: userId },
+    ],
+  });
+
+  if (!connection) {
+    try {
+      const newConnection = await Connection.create({
+        from_user_id: userId,
+        to_user_id: id,
+      });
+
+      const fromUser = await User.findById(userId);
+
+      //NOTE: Send new notification request
+      await publishRabbitMQEvent("connectionReq.sent", {
+        user: id,
+        from: fromUser._id,
+        type: "connection",
+        entityId: fromUser._id,
+      });
+
+      return sendSuccess(res, {}, "Connection Request Sent", 201);
+    } catch (error) {
+      logger.error("Failed to create connection", { error });
+      return sendError(res, error.message, error.status || 500);
+    }
+    //NOTE: We will handle this in the frotnend by greying/disabling the button but just as a fail safe incase
+  } else if (connection && connection.status === "accepted") {
+    return sendSuccess(res, {}, "Connection Already Accepted", 200);
+  }
+
+  return sendSuccess(res, {}, "Connection Request Pending", 200);
 });
 //#endregion

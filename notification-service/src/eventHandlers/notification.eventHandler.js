@@ -71,3 +71,26 @@ export async function handleCommentCreatedEvent(event) {
   }
 }
 //#endregion
+
+//#region Handle Connection Request Sent Event
+export async function handleConnectionRequestSent(event) {
+  try {
+    const { user, from, type, entityId } =
+      handleIncomingEventDataValidation(event);
+
+    const notification = await Notification.create({
+      user,
+      from,
+      type,
+      entityId,
+    });
+
+    logger.info("Comment created event handled successfully", { notification });
+  } catch (error) {
+    logger.error(
+      error?.message || error || "Failed to handle comment created event",
+    );
+    throw new AppError("Failed to handle comment created event", 500);
+  }
+}
+//#endregion

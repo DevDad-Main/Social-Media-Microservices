@@ -5,6 +5,7 @@ import { consumeEvent, initializeRabbitMQ } from "./utils/rabbitmq.utils.js";
 import {
   handlePostLikedEvent,
   handleCommentCreatedEvent,
+  handleConnectionRequestSent,
 } from "./eventHandlers/notification.eventHandler.js";
 
 await connectDB();
@@ -15,7 +16,7 @@ await connectDB();
 
     await consumeEvent("post.liked", handlePostLikedEvent);
     await consumeEvent("comment.created", handleCommentCreatedEvent);
-
+    await consumeEvent("connectionReq.sent", handleConnectionRequestSent);
     app.listen(process.env.PORT || 3007, () => {
       logger.info(
         `Notification Service is running on port ${process.env.PORT || 3007}`,
