@@ -38,14 +38,14 @@ export const registerUser = catchAsync(async (req, res, next) => {
     return sendError(res, errorMessages.join(", "), 400);
   }
 
-  let user = await User.findOne({ $or: [{ username }, { email }] });
+  const existingUser = await User.findOne({ $or: [{ username }, { email }] });
 
-  if (user) {
+  if (existingUser) {
     logger.warn("User Already Exists");
     return sendError(res, "User Already Exists", 400);
   }
 
-  user = new User({
+  const user = new User({
     fullName: `${firstName === " " ? "First" : firstName} ${lastName === " " ? "Last" : lastName}`,
     email,
     username,
@@ -60,9 +60,11 @@ export const registerUser = catchAsync(async (req, res, next) => {
     userCreatedAt: user.createdAt,
   });
 
+  //TODO: Send our user media here.
+
   await clearRedisUsersSearchCache(req);
 
-  return sendSuccess(res, user, "User Registered Successfully", 201);
+  return sendSuccess(res, existingUser, "User Registered Successfully", 201);
 });
 //#endregion
 

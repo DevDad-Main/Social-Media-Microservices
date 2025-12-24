@@ -200,6 +200,7 @@ export const getPosts = catchAsync(async (req, res, next) => {
         },
       },
     },
+    //TODO: Change to cursor based pagination, not offset as we don't use pagination in the frontend, only unlimited scroll
     {
       $sort: { createdAt: -1 },
     },
