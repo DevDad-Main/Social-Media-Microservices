@@ -5,7 +5,7 @@ import {
   generateRefreshToken,
   logoutUser,
   fetchUserById,
-  fetchUserProfiles
+  fetchUserProfiles,
 } from "../controllers/user.controller.js";
 import {
   loginUserValidation,

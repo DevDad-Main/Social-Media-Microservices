@@ -60,7 +60,25 @@ app.set("trust proxy", (ip) => ip.startsWith("10."));
 
 //#region Middleware
 app.use(helmet());
-app.use(cors());
+//#region CORS Configuration
+app.use(
+  cors({
+    // origin: allowedOrigins,
+    origin: ["http://localhost:5173"],
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Requested-With",
+      "device-remember-token",
+      "Access-Control-Allow-Origin",
+      "Origin",
+      "Accept",
+    ],
+  }),
+);
+//#endregion
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
