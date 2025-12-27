@@ -62,7 +62,7 @@ export const getPostsWithAggregation = async (matchStage, limit) => {
               in: { $arrayElemAt: ["$$coverMedia.url", 0] },
             },
           },
-          mediaUrls: {
+          image_urls: {
             $reduce: {
               input: "$media",
               initialValue: [],
@@ -78,7 +78,7 @@ export const getPostsWithAggregation = async (matchStage, limit) => {
           content: 1, // Fixed: was "caption"
           postType: 1,
           likesCount: 1,
-          mediaUrls: 1,
+          image_urls: 1,
           createdAt: 1,
           updatedAt: 1,
           user: {
