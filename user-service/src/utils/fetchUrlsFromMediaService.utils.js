@@ -14,7 +14,7 @@ export const fetchMediaByUserId = async (userId) => {
       `${MEDIA_SERVICE_URL}/api/media/fetch-user-media/${userId}`,
     );
 
-    console.log("DEBUG: User Fetch Media Response ", res);
+    // console.log("DEBUG: User Fetch Media Response ", res.data);
 
     return res.data;
   } catch (error) {

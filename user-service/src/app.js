@@ -36,7 +36,6 @@ const expressEndpointRateLimiter = rateLimit({
 
 //#region Middleware
 app.use(helmet());
-//TODO: Add CORS custom configuration
 //#region CORS Configuration
 app.use(
   cors({

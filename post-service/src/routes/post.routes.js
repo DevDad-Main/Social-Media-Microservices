@@ -14,7 +14,7 @@ import { validateNewPostCreation } from "../utils/validation.utils.js";
 const postRouter = Router();
 
 //NOTE: Internal Service Routes (no auth required)
-postRouter.get("/fetch-post-by-id/:postId", fetchPostById)
+postRouter.get("/fetch-post-by-id/:postId", fetchPostById);
 
 //NOTE: Protected routes (auth required)
 postRouter.use(authenticateUserMiddleware);

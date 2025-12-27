@@ -20,10 +20,14 @@ import {
 import { fetchPostCommentsFromCommentService } from "../utils/fetchPostCommentsFromCommentService.js";
 import { fetchUserProfilesFromUserService } from "../utils/fetchUserProfilesFromUserService.js";
 import { getPostWithAggregation } from "../utils/getPostWithAggregation.utils.js";
+import { getPostsWithAggregation } from "../utils/getPostsWithAggregation.utils.js";
 
 //#region Create Post
 export const createPost = catchAsync(async (req, res, next) => {
+  console.log("DEBUG: req.user = ", req.user);
+
   const errors = validationResult(req);
+
   if (!errors.isEmpty()) {
     const errorMessages = errors.array().map((error) => error.msg);
     logger.warn("Create Post Validation Error: ", { errorMessages });
@@ -32,6 +36,7 @@ export const createPost = catchAsync(async (req, res, next) => {
 
   const { content, postType } = req.body;
   const images = req.files?.images || [];
+
   console.log("DEBUG: req.files =", req.files);
   console.log("DEBUG: images =", images);
 
@@ -101,10 +106,12 @@ export const createPost = catchAsync(async (req, res, next) => {
 
 //#region Get All Posts
 export const getPosts = catchAsync(async (req, res, next) => {
-  const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
+  const cursor = req.query.cursor; // createdAt of last post
 
-  const cacheKey = `posts:${page}-${limit}`;
+  const matchStage = cursor ? { createdAt: { $lt: new Date(cursor) } } : {};
+
+  const cacheKey = `posts:cursor:${cursor || "first"}:${limit}`;
   const cachedPosts = await req.redisClient.get(cacheKey);
 
   if (cachedPosts) {
@@ -116,110 +123,22 @@ export const getPosts = catchAsync(async (req, res, next) => {
     );
   }
 
-  const posts = await Post.aggregate([
-    {
-      $lookup: {
-        from: "postmedias",
-        localField: "_id",
-        foreignField: "postId",
-        as: "media",
-      },
-    },
-    {
-      $lookup: {
-        from: "usermedias",
-        localField: "user",
-        foreignField: "user",
-        as: "usermedias",
-      },
-    },
-    {
-      $lookup: {
-        from: "users",
-        localField: "user",
-        foreignField: "_id",
-        as: "user",
-      },
-    },
+  const posts = await getPostsWithAggregation(matchStage, limit);
 
-    {
-      $unwind: {
-        path: "$user",
-        preserveNullAndEmptyArrays: true,
-      },
-    },
-    {
-      $addFields: {
-        "user.profilePicture": {
-          $let: {
-            vars: {
-              profileMedia: {
-                $filter: {
-                  input: "$usermedias",
-                  cond: { $eq: ["$$this.type", "profile"] },
-                },
-              },
-            },
-            in: { $arrayElemAt: ["$$profileMedia.url", 0] },
-          },
-        },
-        "user.coverPhoto": {
-          $let: {
-            vars: {
-              coverMedia: {
-                $filter: {
-                  input: "$usermedias",
-                  cond: { $eq: ["$$this.type", "cover"] },
-                },
-              },
-            },
-            in: { $arrayElemAt: ["$$coverMedia.url", 0] },
-          },
-        },
-        mediaUrls: {
-          $reduce: {
-            input: "$media",
-            initialValue: [],
-            in: { $concatArrays: ["$$value", "$$this.urls"] },
-          },
-        },
-      },
-    },
-    {
-      $project: {
-        _id: 1,
-        caption: 1,
-        mediaUrls: 1,
-        createdAt: 1,
+  const hasMore = posts.length > limit;
+  const slicedPosts = hasMore ? posts.slice(0, limit) : posts;
 
-        user: {
-          _id: 1,
-          username: 1,
-          profilePicture: 1,
-          coverPhoto: 1,
-        },
-      },
-    },
-    //TODO: Change to cursor based pagination, not offset as we don't use pagination in the frontend, only unlimited scroll
-    {
-      $sort: { createdAt: -1 },
-    },
-    {
-      $skip: (page - 1) * limit,
-    },
-    {
-      $limit: limit,
-    },
-  ]);
+  const nextCursor =
+    slicedPosts.length > 0
+      ? slicedPosts[slicedPosts.length - 1].createdAt
+      : null;
 
   const result = {
-    posts,
-    currentPage: page,
-    totalPages: Math.ceil(posts.length / limit),
-    limit,
+    posts: slicedPosts,
+    nextCursor,
+    hasMore,
   };
 
-  // NOTE: We cache the result for 5 minutes
   await req.redisClient.set(cacheKey, JSON.stringify(result), "EX", 300);
 
   return sendSuccess(res, result, "Posts retrieved successfully", 200);

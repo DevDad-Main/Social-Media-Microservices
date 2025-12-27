@@ -26,6 +26,8 @@ const postSchema = new mongoose.Schema(
   },
 );
 
+postSchema.index({ createdAt: -1 });
+
 /**
  * Mongoose Post Model - Represents user posts with support for text and image content
  * @type {import('mongoose').Model<Post>}
