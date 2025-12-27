@@ -265,6 +265,8 @@ export const fetchUserMedia = catchAsync(async (req, res, next) => {
     return sendError(res, "No Media Found", 400);
   }
 
+  console.log("DEBUG: media = ", media);
+
   return sendSuccess(res, media, "Media Fetched Successfully", 200);
 });
 //#endregion

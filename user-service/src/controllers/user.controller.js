@@ -10,6 +10,7 @@ import { RefreshToken } from "../models/RefreshToken.model.js";
 import { validationResult } from "express-validator";
 import { fetchMediaByUserId } from "../utils/fetchUrlsFromMediaService.utils.js";
 import { isValidObjectId } from "mongoose";
+import { getUserProfileAggregation } from "../utils/getUserProfileAggregation.utils.js";
 import {
   clearRedisUserCache,
   clearRedisUsersSearchCache,
@@ -46,7 +47,7 @@ export const registerUser = catchAsync(async (req, res, next) => {
   }
 
   const user = new User({
-    fullName: `${firstName === " " ? "First" : firstName} ${lastName === " " ? "Last" : lastName}`,
+    fullName: `${firstName} ${lastName}`,
     email,
     username,
     password,
@@ -64,7 +65,7 @@ export const registerUser = catchAsync(async (req, res, next) => {
 
   await clearRedisUsersSearchCache(req);
 
-  return sendSuccess(res, existingUser, "User Registered Successfully", 201);
+  return sendSuccess(res, user, "User Registered Successfully", 201);
 });
 //#endregion
 
@@ -212,39 +213,33 @@ export const getUserProfile = catchAsync(async (req, res, next) => {
     );
   }
 
-  //NOTE: Fetch user from DB
-  const profile = await User.findById(id).select("-password");
-  if (!profile) {
+  //NOTE: Use aggregation pipeline to fetch all required data
+  const [profileData] = await User.aggregate(getUserProfileAggregation(id));
+
+  if (!profileData) {
     logger.warn("User Not Found");
     return sendError(res, "User Not Found", 404);
   }
 
-  //NOTE: Fetch media from MediaService
-  let media = [];
-  try {
-    media = await fetchMediaByUserId(id);
-    logger.info("Media URLS Fetched successfully", { media });
-  } catch (error) {
-    logger.error("Failed to fetch media:", { error });
-    //NOTE: Instead of us returning an error we can just send the Profile as it is
-    return sendSuccess(
-      res,
-      { profile },
-      "User Profile Fetched But Failed To Retrieve Media URLS",
-      200,
-    );
-  }
-
-  //NOTE: Map profilePhoto and coverPhoto
-  const mediaData = media.data || [];
-  const profilePhoto = mediaData.find((m) => m.type === "profile")?.url || null;
-  const coverPhoto = mediaData.find((m) => m.type === "cover")?.url || null;
-
+  //NOTE: Structure the response to match frontend expectations
   const enrichedProfile = {
-    profile,
-    profilePhoto,
-    coverPhoto,
-    posts: [],
+    profile: {
+      _id: profileData._id,
+      fullName: profileData.fullName,
+      username: profileData.username,
+      bio: profileData.bio,
+      location: profileData.location,
+      email: profileData.email,
+      followers: profileData.followers,
+      following: profileData.following,
+      connections: profileData.connections,
+      createdAt: profileData.createdAt,
+      updatedAt: profileData.updatedAt,
+      profile_photo: profileData.profilePhoto,
+      cover_photo: profileData.coverPhoto,
+    },
+    posts: profileData.posts || [],
+    likes: profileData.likedPosts || [],
   };
 
   //NOTE: Cache enriched profile
@@ -649,11 +644,14 @@ export const fetchUser = catchAsync(async (req, res, next) => {
       return sendError(res, "User Not Found", 404, { success: false });
     }
 
-    const { _id } = user;
+    const enrichedUser = {
+      ...user.toObject(),
+      success: true,
+    };
 
     return sendSuccess(
       res,
-      { success: true, _id },
+      enrichedUser,
       "User Passed Authentication Check",
       200,
     );
