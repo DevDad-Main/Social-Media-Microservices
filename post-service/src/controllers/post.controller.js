@@ -111,6 +111,7 @@ export const getPosts = catchAsync(async (req, res, next) => {
 
   const matchStage = cursor ? { createdAt: { $lt: new Date(cursor) } } : {};
 
+  // Use a more specific cache key to avoid collisions
   const cacheKey = `posts:cursor:${cursor || "first"}:${limit}`;
   const cachedPosts = await req.redisClient.get(cacheKey);
 
@@ -124,6 +125,13 @@ export const getPosts = catchAsync(async (req, res, next) => {
   }
 
   const posts = await getPostsWithAggregation(matchStage, limit);
+
+  console.log(
+    "DEBUG: posts type = ",
+    Array.isArray(posts) ? "array" : typeof posts,
+  );
+  console.log("DEBUG: posts length = ", posts.length);
+  console.log("DEBUG: posts = ", JSON.stringify(posts, null, 2));
 
   const hasMore = posts.length > limit;
   const slicedPosts = hasMore ? posts.slice(0, limit) : posts;
@@ -195,8 +203,62 @@ export const updatePost = catchAsync(async (req, res, next) => {
     return sendError(res, errorMessages.join(", "), 400);
   }
 
+  const { postId } = req.params;
   const { content, postType } = req.body;
   const images = req.files?.images || [];
+
+  if (!isValidObjectId(postId)) {
+    logger.warn(`Invalid Post ID: ${postId}`);
+    return sendError(res, "Invalid Post ID", 400);
+  }
+
+  if (!isValidObjectId(req.user._id)) {
+    logger.warn(`Invalid User ID: ${req.user._id}`);
+    return sendError(res, "Invalid User ID", 400);
+  }
+
+  const postToUpdate = await Post.findOneAndUpdate(
+    { _id: postId, user: req.user._id },
+    { content, postType },
+    { new: true, runValidators: true },
+  );
+
+  if (!postToUpdate) {
+    logger.warn(`Post not found or unauthorized: ${postId}`);
+    return sendError(res, "Post not found or unauthorized", 404);
+  }
+
+  // Handle image updates if provided
+  if (images && images.length > 0) {
+    try {
+      const mediaResults = await postMediaFilesToMediaServiceForProcessing(
+        postToUpdate._id.toString(),
+        images,
+      );
+      logger.info("Update post media results: ", mediaResults);
+    } catch (error) {
+      logger.error("Failed to process images for update", { error });
+      // Don't fail the update, just log the error
+    }
+  }
+
+  await publishRabbitMQEvent("post.updated", {
+    postId: postToUpdate._id.toString(),
+    userId: req.user._id.toString(),
+    searchTerm: postToUpdate.content,
+  });
+
+  try {
+    await Promise.all([
+      clearRedisPostCache(req, postId),
+      clearRedisPostsCache(req),
+      clearRedisPostsSearchCache(req),
+    ]);
+  } catch (error) {
+    logger.error("Failed to clear cache after update", { error });
+  }
+
+  return sendSuccess(res, postToUpdate, "Post updated successfully", 200);
 });
 //#endregion
 
