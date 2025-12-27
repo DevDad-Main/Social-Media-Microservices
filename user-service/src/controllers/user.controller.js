@@ -644,8 +644,23 @@ export const fetchUser = catchAsync(async (req, res, next) => {
       return sendError(res, "User Not Found", 404, { success: false });
     }
 
+    const userProfilePhoto = await fetchMediaByUserId(userId);
+
+    if (!userProfilePhoto) {
+      logger.warn("User Profile Photo Not Found");
+      return sendError(res, "User Profile Photo Not Found", 404);
+    }
+
     const enrichedUser = {
       ...user.toObject(),
+      profile_photo:
+        userProfilePhoto.data.type === "profile"
+          ? userProfilePhoto.data.url
+          : null,
+      cover_photo:
+        userProfilePhoto.data.type === "cover"
+          ? userProfilePhoto.data.url
+          : null,
       success: true,
     };
 
