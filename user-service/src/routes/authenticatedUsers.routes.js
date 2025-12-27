@@ -7,6 +7,7 @@ import {
   followUser,
   unfollowUser,
   acceptConnectionRequests,
+  fetchUser,
 } from "../controllers/user.controller.js";
 import { authenticateUserMiddleware } from "../middleware/auth.middleware.js";
 import { updateUserValidation } from "../utils/validation.utils.js";
@@ -17,6 +18,7 @@ authenticatedUsersRouter.use(authenticateUserMiddleware);
 
 // Protected user routes (token required) - but we'll handle auth at gateway level
 authenticatedUsersRouter.get("/profile/:id", getUserProfile);
+authenticatedUsersRouter.get("/get-user", fetchUser);
 
 authenticatedUsersRouter.post(
   "/update-user",

@@ -1,7 +1,11 @@
 import { AppError } from "devdad-express-utils";
 import { User } from "../models/User.model.js";
 import { body } from "express-validator";
-import { validateUsername, validateName, validatePassword } from "./safeRegex.utils.js";
+import {
+  validateUsername,
+  validateName,
+  validatePassword,
+} from "./safeRegex.utils.js";
 
 //#region Register User Validation
 export const registerUserValidation = [
@@ -67,13 +71,12 @@ export const registerUserValidation = [
 
 //#region Login User Validation
 export const loginUserValidation = [
-  body("email")
+  body("username")
     .notEmpty()
-    .isEmail()
-    .withMessage("Email can't be empty!")
+    .withMessage("Username can't be empty!")
     .bail()
     .custom(async (value) => {
-      const userToFind = await User.findOne({ email: value });
+      const userToFind = await User.findOne({ username: value });
       if (!userToFind) {
         throw new Error("User Not Found!");
       }

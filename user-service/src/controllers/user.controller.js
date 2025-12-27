@@ -70,7 +70,8 @@ export const registerUser = catchAsync(async (req, res, next) => {
 
 //#region Login User
 export const loginUser = catchAsync(async (req, res, next) => {
-  const { email, password } = req.body;
+  const { username, password } = req.body;
+  console.log(req.body);
 
   const errors = validationResult(req);
 
@@ -80,7 +81,7 @@ export const loginUser = catchAsync(async (req, res, next) => {
     return sendError(res, errorMessages.join(", "), 400);
   }
 
-  const user = await User.findOne({ email });
+  const user = await User.findOne({ username });
 
   if (!user) {
     logger.warn("User Not Found");
@@ -99,9 +100,11 @@ export const loginUser = catchAsync(async (req, res, next) => {
   res
     .cookie("accessToken", accesstoken, HTTP_OPTIONS)
     .cookie("refreshToken", refreshToken, HTTP_OPTIONS);
+
   return sendSuccess(
     res,
     {
+      success: true,
       accesstoken,
       refreshToken,
       user: {
@@ -172,11 +175,18 @@ export const logoutUser = catchAsync(async (req, res, next) => {
     .clearCookie("accessToken", HTTP_OPTIONS)
     .clearCookie("refreshToken", HTTP_OPTIONS);
 
-  return sendSuccess(res, {}, "Logout Successful", 200);
+  return sendSuccess(
+    res,
+    {
+      success: true,
+    },
+    "Logout Successful",
+    200,
+  );
 });
 //#endregion
 
-//#region Get User By Id
+//#region Get User By Id (Frontend API Call)
 export const getUserProfile = catchAsync(async (req, res, next) => {
   const { id } = req.params;
 
@@ -231,9 +241,10 @@ export const getUserProfile = catchAsync(async (req, res, next) => {
   const coverPhoto = mediaData.find((m) => m.type === "cover")?.url || null;
 
   const enrichedProfile = {
-    ...profile.toObject(),
+    profile,
     profilePhoto,
     coverPhoto,
+    posts: [],
   };
 
   //NOTE: Cache enriched profile
@@ -414,8 +425,6 @@ export const fetchUserProfiles = catchAsync(async (req, res, next) => {
 });
 //#endregion
 
-//#region Connection Controllers
-
 //#region Send Connection Request
 export const sendConnectionRequest = catchAsync(async (req, res, next) => {
   const userId = req.user._id;
@@ -563,7 +572,6 @@ export const getUserConnections = async (req, res) => {
   }
 };
 //#endregion
-//#endregion
 
 //#region Follow User
 export const followUser = async (req, res) => {
@@ -623,4 +631,35 @@ export const unfollowUser = async (req, res) => {
     return sendError(res, error.message, error.status || 500, { error });
   }
 };
+//#endregion
+
+//#region Fetch User
+export const fetchUser = catchAsync(async (req, res, next) => {
+  try {
+    const userId = req.user?._id;
+
+    if (!isValidObjectId(userId)) {
+      return sendError(res, "Invalid User Id", 400, { success: false });
+    }
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      logger.warn("User Not Found with ID: " + userId);
+      return sendError(res, "User Not Found", 404, { success: false });
+    }
+
+    const { _id } = user;
+
+    return sendSuccess(
+      res,
+      { success: true, _id },
+      "User Passed Authentication Check",
+      200,
+    );
+  } catch (error) {
+    logger.error("Failed to fetch user", { error });
+    return sendError(res, error.message, error.status || 500, { error });
+  }
+});
 //#endregion

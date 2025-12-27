@@ -26,19 +26,19 @@ redisClient.on("connect", (info) =>
 );
 redisClient.on("error", (err) => logger.error("❌ Redis error:", { err }));
 
-const expressEndpointRateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-  handler: (req, res, _next) => {
-    logger.warn(`Public API Rate Limit Exceeded for IP: ${req.ip}`);
-    return sendError(res, "Rate Limit Exceeded", 429);
-  },
-  store: new RedisStore({
-    sendCommand: (...args) => redisClient.call(...args),
-  }),
-});
+// const expressEndpointRateLimiter = rateLimit({
+//   windowMs: 15 * 60 * 1000, // 15 minutes
+//   max: 100, // limit each IP to 100 requests per windowMs
+//   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+//   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+//   handler: (req, res, _next) => {
+//     logger.warn(`Public API Rate Limit Exceeded for IP: ${req.ip}`);
+//     return sendError(res, "Rate Limit Exceeded", 429);
+//   },
+//   store: new RedisStore({
+//     sendCommand: (...args) => redisClient.call(...args),
+//   }),
+// });
 const proxyOptions = {
   proxyReqPathResolver: (req) => {
     return req.originalUrl.replace(/^\/v1/, "/api");
@@ -82,7 +82,7 @@ app.use(
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(expressEndpointRateLimiter);
+// app.use(expressEndpointRateLimiter);
 //#endregion
 
 //#region User Service Proxy - Public Auth Routes (no token required)
