@@ -171,6 +171,7 @@ app.use(
       );
       return proxyResData;
     },
+    limit: "50mb",
   }),
 );
 //#endregion
@@ -226,6 +227,7 @@ app.use(
       return proxyResData;
     },
     parseReqBody: false,
+    limit: "50mb",
   }),
 );
 //#endregion

@@ -7,6 +7,7 @@ import mongoose from "mongoose";
  */
 export const getUserProfileAggregation = (userId) => [
   { $match: { _id: new mongoose.Types.ObjectId(userId) } },
+
   {
     $lookup: {
       from: "posts",
@@ -25,32 +26,26 @@ export const getUserProfileAggregation = (userId) => [
   },
   {
     $lookup: {
+      from: "users",
+      localField: "posts.user",
+      foreignField: "_id",
+      as: "postUsers",
+    },
+  },
+  {
+    $lookup: {
+      from: "usermedias",
+      localField: "postUsers._id",
+      foreignField: "user",
+      as: "postUserMedias",
+    },
+  },
+  {
+    $lookup: {
       from: "usermedias",
       localField: "_id",
       foreignField: "user",
       as: "userMedias",
-    },
-  },
-  {
-    $lookup: {
-      from: "posts",
-      let: { userId: "$_id" },
-      pipeline: [
-        {
-          $match: {
-            $expr: { $in: ["$$userId", "$likesCount"] },
-          },
-        },
-      ],
-      as: "likedPosts",
-    },
-  },
-  {
-    $lookup: {
-      from: "postmedias",
-      localField: "likedPosts._id",
-      foreignField: "postId",
-      as: "likedPostMedias",
     },
   },
   {
@@ -74,33 +69,51 @@ export const getUserProfileAggregation = (userId) => [
                         },
                       },
                     },
-                    in: { $ifNull: ["$$postMedia.urls", []] },
+                    in: {
+                      $let: {
+                        vars: {
+                          mediaUrls: { $arrayElemAt: ["$$postMedia.urls", 0] },
+                        },
+                        in: { $ifNull: ["$$mediaUrls", []] },
+                      },
+                    },
                   },
                 },
-              },
-            ],
-          },
-        },
-      },
-      likedPosts: {
-        $map: {
-          input: "$likedPosts",
-          as: "post",
-          in: {
-            $mergeObjects: [
-              "$$post",
-              {
-                image_urls: {
+                user: {
                   $let: {
                     vars: {
-                      postMedia: {
+                      postUser: {
                         $filter: {
-                          input: "$likedPostMedias",
-                          cond: { $eq: ["$$this.postId", "$$post._id"] },
+                          input: "$postUsers",
+                          cond: { $eq: ["$$this._id", "$$post.user"] },
                         },
                       },
                     },
-                    in: { $ifNull: ["$$postMedia.urls", []] },
+                    in: {
+                      $mergeObjects: [
+                        { $arrayElemAt: ["$$postUser", 0] },
+                        {
+                          profile_photo: {
+                            $let: {
+                              vars: {
+                                postUserMedia: {
+                                  $filter: {
+                                    input: "$postUserMedias",
+                                    cond: {
+                                      $and: [
+                                        { $eq: ["$$this.user", "$$post.user"] },
+                                        { $eq: ["$$this.type", "profile"] },
+                                      ],
+                                    },
+                                  },
+                                },
+                              },
+                              in: { $arrayElemAt: ["$$postUserMedia.url", 0] },
+                            },
+                          },
+                        },
+                      ],
+                    },
                   },
                 },
               },
@@ -108,7 +121,8 @@ export const getUserProfileAggregation = (userId) => [
           },
         },
       },
-      profilePhoto: {
+
+      profile_photo: {
         $let: {
           vars: {
             profileMedia: {
@@ -121,7 +135,7 @@ export const getUserProfileAggregation = (userId) => [
           in: { $arrayElemAt: ["$$profileMedia.url", 0] },
         },
       },
-      coverPhoto: {
+      cover_photo: {
         $let: {
           vars: {
             coverMedia: {
@@ -152,31 +166,31 @@ export const getUserProfileAggregation = (userId) => [
       updatedAt: 1,
 
       // Media fields
-      profilePhoto: 1,
-      coverPhoto: 1,
+      profile_photo: 1,
+      cover_photo: 1,
 
-      // Posts with media
+      // Posts with media and user, sorted by newest first
       posts: {
-        _id: 1,
-        content: 1,
-        postType: 1,
-        likesCount: 1,
-        image_urls: 1,
-        createdAt: 1,
-        updatedAt: 1,
-      },
-
-      // Liked posts with media
-      likedPosts: {
-        _id: 1,
-        content: 1,
-        postType: 1,
-        likesCount: 1,
-        image_urls: 1,
-        createdAt: 1,
-        updatedAt: 1,
+        $sortArray: {
+          input: {
+            $map: {
+              input: "$posts",
+              as: "post",
+              in: {
+                _id: "$$post._id",
+                content: "$$post.content",
+                postType: "$$post.postType",
+                likesCount: "$$post.likesCount",
+                image_urls: "$$post.image_urls",
+                user: "$$post.user",
+                createdAt: "$$post.createdAt",
+                updatedAt: "$$post.updatedAt",
+              },
+            },
+          },
+          sortBy: { createdAt: -1 },
+        },
       },
     },
   },
 ];
-

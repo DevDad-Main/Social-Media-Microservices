@@ -37,7 +37,7 @@ const expressEndpointRateLimiter = rateLimit({
 app.use(helmet());
 //TODO: Add CORS custom configuration
 app.use(cors());
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
 
