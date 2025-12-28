@@ -11,6 +11,7 @@ import {
   loginUserValidation,
   registerUserValidation,
 } from "../utils/validation.utils.js";
+import { upload } from "../utils/multer.utils.js";
 
 const userRouter = Router();
 
@@ -19,7 +20,15 @@ userRouter.get("/fetch-user/:userId", fetchUserById);
 userRouter.post("/fetch-user-profiles", fetchUserProfiles);
 
 // Public auth routes (no token required)
-userRouter.post("/register", registerUserValidation, registerUser);
+userRouter.post(
+  "/register",
+  upload.fields([
+    { name: "profile_photo", maxCount: 1 },
+    { name: "cover_photo", maxCount: 1 },
+  ]),
+  registerUserValidation,
+  registerUser,
+);
 userRouter.post("/login", loginUserValidation, loginUser);
 userRouter.post("/logout", logoutUser);
 userRouter.post("/refresh-token", generateRefreshToken);

@@ -17,6 +17,7 @@ import {
 } from "../utils/cleanRedisCache.utils.js";
 import { publishEvent as publishRabbitMQEvent } from "../utils/rabbitmq.utils.js";
 import { Connection } from "../models/Connection.model.js";
+import { sendUserMediaToMediaService } from "../utils/sendUserMediaToMediaService.utils.js";
 
 const MAX_CONNECTION_REQUESTS = 2;
 
@@ -39,6 +40,8 @@ export const registerUser = catchAsync(async (req, res, next) => {
     return sendError(res, errorMessages.join(", "), 400);
   }
 
+  console.log("DEBUG: req.body = ", req.body);
+
   const existingUser = await User.findOne({ $or: [{ username }, { email }] });
 
   if (existingUser) {
@@ -55,13 +58,24 @@ export const registerUser = catchAsync(async (req, res, next) => {
 
   await user.save(); // NOTE: Trigger pre-save hash password hook
 
+  if (req.files && (req.files.profile_photo || req.files.cover_photo)) {
+    try {
+      await sendUserMediaToMediaService(user._id.toString(), req.files);
+    } catch (mediaError) {
+      logger.error("Failed to upload media during registration:", {
+        error: mediaError,
+      });
+      return sendError(res, mediaError.message, mediaError.status || 500, {
+        mediaError,
+      });
+    }
+  }
+
   await publishRabbitMQEvent("user.created", {
     userId: user._id.toString(),
     searchTerm: user.username,
     userCreatedAt: user.createdAt,
   });
-
-  //TODO: Send our user media here.
 
   await clearRedisUsersSearchCache(req);
 
@@ -72,7 +86,7 @@ export const registerUser = catchAsync(async (req, res, next) => {
 //#region Login User
 export const loginUser = catchAsync(async (req, res, next) => {
   const { username, password } = req.body;
-  console.log(req.body);
+  console.log("DEBUG: req.body = ", req.body);
 
   const errors = validationResult(req);
 
@@ -98,14 +112,15 @@ export const loginUser = catchAsync(async (req, res, next) => {
 
   const { accesstoken, refreshToken } = await generateTokens(user);
 
-  res
-    .cookie("accessToken", accesstoken, HTTP_OPTIONS)
-    .cookie("refreshToken", refreshToken, HTTP_OPTIONS);
+  // res
+  //   .cookie("accessToken", accesstoken, HTTP_OPTIONS)
+  //   .cookie("refreshToken", refreshToken, HTTP_OPTIONS);
+
+  console.log("headersSent:", res.headersSent);
 
   return sendSuccess(
     res,
     {
-      success: true,
       accesstoken,
       refreshToken,
       user: {
@@ -115,6 +130,10 @@ export const loginUser = catchAsync(async (req, res, next) => {
     },
     "Login Successful",
     200,
+    [
+      (res) => res.cookie("accessToken", accesstoken, HTTP_OPTIONS),
+      (res) => res.cookie("refreshToken", refreshToken, HTTP_OPTIONS),
+    ],
   );
 });
 //#endregion
@@ -636,6 +655,8 @@ export const fetchUser = catchAsync(async (req, res, next) => {
     if (!isValidObjectId(userId)) {
       return sendError(res, "Invalid User Id", 400, { success: false });
     }
+
+    logger.info("DEBUG: Fetch User By Profile Id - userId = ", userId);
 
     const user = await User.findById(userId);
 

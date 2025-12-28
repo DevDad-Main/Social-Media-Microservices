@@ -80,8 +80,23 @@ app.use(
 );
 //#endregion
 app.use(cookieParser());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
+
+// NOTE: Increase body parser limits for file uploads
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+app.use(express.json({ limit: "50mb", type: "application/json" }));
+
+// NOTE: Explicitly handle multipart/form-data without body parsing
+app.use((req, res, next) => {
+  if (
+    req.headers["content-type"] &&
+    req.headers["content-type"].startsWith("multipart/form-data")
+  ) {
+    // Don't parse multipart form data, let the target service handle it
+    return next();
+  }
+  next();
+});
+
 // app.use(expressEndpointRateLimiter);
 //#endregion
 
@@ -92,7 +107,12 @@ app.use(
     ...proxyOptions,
     // NOTE: Allows us to overwrite certain Request Options before proxying
     proxyReqOptDecorator: (proxyReqOptions, srcReq) => {
-      proxyReqOptions.headers["content-type"] = "application/json";
+      if (
+        !srcReq.headers["content-type"] ||
+        !srcReq.headers["content-type"].startsWith("multipart/form-data")
+      ) {
+        proxyReqOptions.headers["content-type"] = "application/json";
+      }
       return proxyReqOptions;
     },
     userResDecorator: (proxyRes, proxyResData, userReq, userRes) => {
@@ -101,6 +121,7 @@ app.use(
       );
       return proxyResData;
     },
+    limit: "50mb",
   }),
 );
 //#endregion

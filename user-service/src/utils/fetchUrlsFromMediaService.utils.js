@@ -1,5 +1,5 @@
 import axios from "axios";
-import { AppError } from "devdad-express-utils";
+import { AppError, logger } from "devdad-express-utils";
 
 const MEDIA_SERVICE_URL =
   process.env.MEDIA_SERVICE_URL || "http://media-service:3003";

@@ -40,6 +40,9 @@ const fetchMediaForAUserAndFindAProperty = async (req, mediaType) => {
 export const uploadUsersProfileMedia = catchAsync(async (req, res, next) => {
   const { profile_photo_type, cover_photo_type } = req.body;
 
+  console.log("DEBUG: req.body = ", req.body);
+  console.log("DEBUG: req.files = ", req.files);
+
   const profilePhoto = req.files?.profile_photo?.[0];
   const coverPhoto = req.files?.cover_photo?.[0];
 
@@ -117,6 +120,95 @@ export const uploadUsersProfileMedia = catchAsync(async (req, res, next) => {
     return sendError(res, error.message, 500);
   }
 });
+//#endregion
+
+//#region Upload Registration User Media Controller (for new users)
+export const uploadRegistrationUserMedia = catchAsync(
+  async (req, res, next) => {
+    const { profile_photo_type, cover_photo_type, userId } = req.body;
+
+    console.log("DEBUG: Registration media upload - req.body = ", req.body);
+    console.log("DEBUG: Registration media upload - userId = ", userId);
+
+    const profilePhoto = req.files?.profile_photo?.[0];
+    const coverPhoto = req.files?.cover_photo?.[0];
+
+    if (!profilePhoto && !coverPhoto) {
+      logger.warn("At least one photo (profile or cover) is required");
+      return sendError(
+        res,
+        "At least one photo (profile or cover) is required",
+        400,
+      );
+    }
+
+    if (profilePhoto && !profile_photo_type) {
+      logger.warn("Profile photo provided but missing Profile Type");
+      return sendError(
+        res,
+        "Profile photo provided but missing Profile Type",
+        400,
+      );
+    }
+
+    if (coverPhoto && !cover_photo_type) {
+      logger.warn("Cover photo provided but missing Cover Type");
+      return sendError(res, "Cover photo provided but missing Cover Type", 400);
+    }
+
+    if (profilePhoto && profile_photo_type !== "profile") {
+      logger.warn("Profile Type is not equal to 'profile'");
+      return sendError(res, "Profile Type is not equal to 'profile'", 400);
+    }
+
+    if (coverPhoto && cover_photo_type !== "cover") {
+      logger.warn("Cover Type is not equal to 'cover'");
+      return sendError(res, "Cover Type is not equal to 'cover'", 400);
+    }
+
+    try {
+      const result = {
+        user: {
+          _id: userId,
+        },
+      };
+
+      if (profilePhoto) {
+        const profileMedia = await uploadSingleUserProfileMedia(
+          profilePhoto,
+          userId,
+          profile_photo_type,
+        );
+        result.profile = {
+          mediaId: profileMedia._id,
+          url: profileMedia.url,
+        };
+      }
+
+      if (coverPhoto) {
+        const coverMedia = await uploadSingleUserProfileMedia(
+          coverPhoto,
+          userId,
+          cover_photo_type,
+        );
+        result.cover = {
+          mediaId: coverMedia._id,
+          url: coverMedia.url,
+        };
+      }
+
+      return sendSuccess(
+        res,
+        result,
+        "Registration media uploaded successfully",
+        201,
+      );
+    } catch (error) {
+      logger.error("Registration media upload error:", error.message);
+      return sendError(res, error.message, 500);
+    }
+  },
+);
 //#endregion
 
 //#region Upload Updated User Profile Media Controller
