@@ -309,12 +309,12 @@ export const togglePostLike = catchAsync(async (req, res, next) => {
 
   if (!isValidObjectId(postId)) {
     logger.warn(`Invalid MongoDB Post ID: ${postId}`);
-    return sendError(res, "Invalid Post ID", 400);
+    return sendError(res, "Invalid Post ID", 400, { success: false });
   }
 
   if (!isValidObjectId(loggedInUserId)) {
     logger.warn(`Invalid MongoDB User ID: ${loggedInUserId}`);
-    return sendError(res, "Invalid User ID", 400);
+    return sendError(res, "Invalid User ID", 400, { success: false });
   }
 
   const updatedPost = await Post.findByIdAndUpdate(
@@ -343,7 +343,7 @@ export const togglePostLike = catchAsync(async (req, res, next) => {
 
   if (!updatedPost) {
     logger.warn(`Post Not Found: ${postId}`);
-    return sendError(res, "Post Not Found", 404);
+    return sendError(res, "Post Not Found", 404, { success: false });
   }
 
   const isLiked = updatedPost.likesCount.some(
@@ -371,7 +371,8 @@ export const togglePostLike = catchAsync(async (req, res, next) => {
     logger.error("Failed to clear cache after like toggle", { error });
   }
 
-  return sendSuccess(res, updatedPost, message, 200);
+  //NOTE: We return success: true as we don't want to return the updated post -> This could change in the future if the FE requires additional data
+  return sendSuccess(res, { success: true }, message, 200);
 });
 //#endregion
 
