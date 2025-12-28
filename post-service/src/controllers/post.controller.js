@@ -182,10 +182,40 @@ export const getPostById = catchAsync(async (req, res, next) => {
       return sendError(res, "Post not found", 404);
     }
 
-    // NOTE: We cache the result for 1 hour as a single post is not expected to change often
-    await req.redisClient.set(cacheKey, JSON.stringify(post), "EX", 3600);
+    const transformedPostAggregateData = {
+      post: {
+        content: post.content,
+        postType: post.postType,
+        likesCount: post.likesCount,
+        image_urls: post.image_urls,
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
+        comments: post.comments,
 
-    return sendSuccess(res, post, "Post retrieved successfully", 200);
+        user: {
+          fullName: post.postAuthor.fullName,
+          username: post.postAuthor.username,
+          profile_photo: post.postAuthor.profile_photo,
+        },
+      },
+    };
+
+    // NOTE: We cache the result for 1 hour as a single post is not expected to change often
+    await req.redisClient.set(
+      cacheKey,
+      JSON.stringify(transformedPostAggregateData),
+      "EX",
+      3600,
+    );
+
+    console.log("Cached post", transformedPostAggregateData);
+
+    return sendSuccess(
+      res,
+      transformedPostAggregateData,
+      "Post retrieved successfully",
+      200,
+    );
   } catch (error) {
     logger.error("Failed to fetch post:", { error });
     return sendError(res, error.message || "Failed to fetch post", 500);

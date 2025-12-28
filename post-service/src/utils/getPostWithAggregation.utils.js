@@ -78,7 +78,7 @@ export const getPostWithAggregation = async (postId) => {
     {
       $addFields: {
         // Add profile picture to post author
-        "postAuthor.profilePicture": {
+        "postAuthor.profile_photo": {
           $let: {
             vars: {
               profileMedia: {
@@ -116,7 +116,7 @@ export const getPostWithAggregation = async (postId) => {
               $mergeObjects: [
                 "$$comment", // Keep original comment fields
                 {
-                  user: {
+                  owner: {
                     $let: {
                       vars: {
                         // Find the user profile for this comment's owner
@@ -125,7 +125,9 @@ export const getPostWithAggregation = async (postId) => {
                             {
                               $filter: {
                                 input: "$commentUsers",
-                                cond: { $eq: ["$$this._id", "$$comment.owner"] },
+                                cond: {
+                                  $eq: ["$$this._id", "$$comment.owner"],
+                                },
                               },
                             },
                             0,
@@ -144,7 +146,7 @@ export const getPostWithAggregation = async (postId) => {
                           "$$user", // User profile data
                           {
                             // Add profile picture from user media
-                            profilePicture: {
+                            profile_photo: {
                               $let: {
                                 vars: {
                                   profileMedia: {
@@ -155,20 +157,6 @@ export const getPostWithAggregation = async (postId) => {
                                   },
                                 },
                                 in: { $arrayElemAt: ["$$profileMedia.url", 0] },
-                              },
-                            },
-                            // Add cover photo from user media
-                            coverPhoto: {
-                              $let: {
-                                vars: {
-                                  coverMedia: {
-                                    $filter: {
-                                      input: "$$userMedias",
-                                      cond: { $eq: ["$$this.type", "cover"] },
-                                    },
-                                  },
-                                },
-                                in: { $arrayElemAt: ["$$coverMedia.url", 0] },
                               },
                             },
                           },
@@ -195,7 +183,7 @@ export const getPostWithAggregation = async (postId) => {
         updatedAt: 1,
 
         // Flatten media URLs into a simple array
-        mediaUrls: {
+        image_urls: {
           $reduce: {
             input: "$media",
             initialValue: [],
@@ -208,19 +196,14 @@ export const getPostWithAggregation = async (postId) => {
           _id: 1,
           content: 1,
           createdAt: 1,
-          user: {
+          parent: 1,
+          owner: {
             _id: 1,
             username: 1,
-            profilePicture: 1,
+            profile_photo: 1,
           },
         },
-
-        // Include post author info
-        postAuthor: {
-          _id: 1,
-          username: 1,
-          profilePicture: 1,
-        },
+        postAuthor: 1,
       },
     },
   ]);

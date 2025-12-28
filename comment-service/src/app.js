@@ -36,7 +36,25 @@ const expressEndpointRateLimiter = rateLimit({
 //#region Middleware
 app.use(helmet());
 //TODO: Add CORS custom configuration
-app.use(cors());
+//#region CORS Configuration
+app.use(
+  cors({
+    // origin: allowedOrigins,
+    origin: ["http://localhost:5173"],
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Requested-With",
+      "device-remember-token",
+      "Access-Control-Allow-Origin",
+      "Origin",
+      "Accept",
+    ],
+  }),
+);
+//#endregion
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
@@ -60,7 +78,7 @@ app.use(
     req.redisClient = redisClient;
     next();
   },
-  commentRouter
+  commentRouter,
 );
 //#endregion
 
