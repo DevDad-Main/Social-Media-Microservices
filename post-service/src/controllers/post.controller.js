@@ -64,10 +64,10 @@ export const createPost = catchAsync(async (req, res, next) => {
   });
 
   let postMediaURLs = [];
-  console.log(
-    "DEBUG: About to check if condition - images.length =",
-    images?.length,
-  );
+  console.log("DEBUG: About to check if condition - images.length =", {
+    imagesLength: images?.length,
+    images,
+  });
   if (images && images.length > 0) {
     try {
       console.log("INSIDE IF BLOCK: Processing images");
@@ -164,16 +164,16 @@ export const getPostById = catchAsync(async (req, res, next) => {
     }
 
     const cacheKey = `post:${postId}`;
-    const cachedPost = await req.redisClient.get(cacheKey);
-
-    if (cachedPost) {
-      return sendSuccess(
-        res,
-        JSON.parse(cachedPost),
-        "Posts retrieved successfully (cached)",
-        200,
-      );
-    }
+    // const cachedPost = await req.redisClient.get(cacheKey);
+    //
+    // if (cachedPost) {
+    //   return sendSuccess(
+    //     res,
+    //     JSON.parse(cachedPost),
+    //     "Posts retrieved successfully (cached)",
+    //     200,
+    //   );
+    // }
 
     const post = await getPostWithAggregation(postId);
 
@@ -181,6 +181,8 @@ export const getPostById = catchAsync(async (req, res, next) => {
       logger.warn(`Post with ID ${postId} not found`);
       return sendError(res, "Post not found", 404);
     }
+
+    console.log("POST DATA ", post);
 
     const transformedPostAggregateData = {
       post: {

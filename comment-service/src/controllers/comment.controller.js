@@ -185,7 +185,7 @@ export const replyToComment = catchAsync(async (req, res, next) => {
 
     return sendSuccess(
       res,
-      enrichedComment,
+      { comment: enrichedComment },
       `Comment added successfully to parent comment: ${parentId}`,
       201,
     );
