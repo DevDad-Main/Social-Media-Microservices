@@ -112,12 +112,6 @@ export const loginUser = catchAsync(async (req, res, next) => {
 
   const { accesstoken, refreshToken } = await generateTokens(user);
 
-  // res
-  //   .cookie("accessToken", accesstoken, HTTP_OPTIONS)
-  //   .cookie("refreshToken", refreshToken, HTTP_OPTIONS);
-
-  console.log("headersSent:", res.headersSent);
-
   return sendSuccess(
     res,
     {
