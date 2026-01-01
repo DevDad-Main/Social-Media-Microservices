@@ -13,28 +13,7 @@ import {
 
 const mediaRouter = Router();
 
-// mediaRouter.use(authenticateUserMiddleware);
-
-mediaRouter
-  .route("/upload-user-media")
-  .post(
-    upload.fields([
-      { name: "profile_photo", maxcount: 1 },
-      { name: "cover_photo", maxcount: 1 },
-    ]),
-    authenticateUserMiddleware,
-    uploadUsersProfileMedia,
-  )
-  .put(
-    upload.fields([
-      { name: "profile_photo", maxCount: 1 },
-      { name: "cover_photo", maxCount: 1 },
-    ]),
-    authenticateUserMiddleware,
-    uploadUpdatedUserProfileMedia,
-  );
-
-//NOTE: Internal APIs
+//#region Internal APIs
 mediaRouter.post(
   "/post-media-files",
   upload.fields([{ name: "images", maxCount: 4 }]),
@@ -55,5 +34,27 @@ mediaRouter.post(
 
 mediaRouter.get("/fetch-user-media/:userId", fetchUserMedia);
 mediaRouter.get("/fetch-post-media/:postId", fetchPostMedia);
+//#endregion
+
+mediaRouter.use(authenticateUserMiddleware);
+
+mediaRouter
+  .route("/upload-user-media")
+  .post(
+    upload.fields([
+      { name: "profile_photo", maxcount: 1 },
+      { name: "cover_photo", maxcount: 1 },
+    ]),
+    authenticateUserMiddleware,
+    uploadUsersProfileMedia,
+  )
+  .put(
+    upload.fields([
+      { name: "profile_photo", maxCount: 1 },
+      { name: "cover_photo", maxCount: 1 },
+    ]),
+    authenticateUserMiddleware,
+    uploadUpdatedUserProfileMedia,
+  );
 
 export default mediaRouter;

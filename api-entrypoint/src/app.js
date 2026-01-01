@@ -199,6 +199,7 @@ app.use(
       );
       return proxyResData;
     },
+    limit: "50mb",
   }),
 );
 //#endregion

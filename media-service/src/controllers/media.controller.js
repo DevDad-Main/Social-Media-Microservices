@@ -350,11 +350,11 @@ export const fetchUserMedia = catchAsync(async (req, res, next) => {
     return sendError(res, `ID: ${userId} is not a valid MongoDB ObjectId`, 400);
   }
 
-  const media = await UserMedia.findOne({ user: userId });
+  const media = await UserMedia.find({ user: userId });
 
-  if (!media) {
-    logger.warn("No Media Found", 404);
-    return sendError(res, "No Media Found", 400);
+  if (!media || media.length === 0) {
+    logger.warn("No Media Found");
+    return sendError(res, "No Media Found", 404);
   }
 
   console.log("DEBUG: media = ", media);

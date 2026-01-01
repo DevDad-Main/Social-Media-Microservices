@@ -23,7 +23,7 @@ export const sendUserMediaToMediaService = async (
       throw new AppError("Invalid user ID", 400);
     }
 
-    console.log("DEBUG: files = ", files);
+    console.log("DEBUG sendUserMediaToMediaService(): files = ", files);
     const formData = new FormData();
 
     if (files.profile_photo) {

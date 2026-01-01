@@ -41,6 +41,7 @@ export const registerUser = catchAsync(async (req, res, next) => {
   }
 
   console.log("DEBUG: req.body = ", req.body);
+  console.log("DEBUG REGISTER ROUTE: req.files = ", req.files);
 
   const existingUser = await User.findOne({ $or: [{ username }, { email }] });
 
@@ -224,7 +225,7 @@ export const getUserProfile = catchAsync(async (req, res, next) => {
   console.log("DEBUG: cachedProfile for user ${id} = ", cachedProfile);
   console.log("DEBUG: Cache exists = ", !!cachedProfile);
   console.log("DEBUG: Cache busting = ", bust);
-  
+
   if (cachedProfile && !bust) {
     try {
       const parsedCache = JSON.parse(cachedProfile);
@@ -241,7 +242,10 @@ export const getUserProfile = catchAsync(async (req, res, next) => {
         await req.redisClient.del(cacheKey);
       }
     } catch (parseError) {
-      console.log("DEBUG: Cache parse error, clearing and refetching", parseError);
+      console.log(
+        "DEBUG: Cache parse error, clearing and refetching",
+        parseError,
+      );
       await req.redisClient.del(cacheKey);
     }
   }
@@ -276,6 +280,8 @@ export const getUserProfile = catchAsync(async (req, res, next) => {
     posts: profileData.posts || [],
     likes: profileData.likedPosts || [],
   };
+
+  console.log("DEBUG: Enriched profile data:", enrichedProfile);
 
   //NOTE: Cache enriched profile
   await req.redisClient.set(
@@ -683,23 +689,20 @@ export const fetchUser = catchAsync(async (req, res, next) => {
       return sendError(res, "User Not Found", 404, { success: false });
     }
 
-    const userProfilePhoto = await fetchMediaByUserId(userId);
+    const userMedia = await fetchMediaByUserId(userId);
 
-    if (!userProfilePhoto) {
-      logger.warn("User Profile Photo Not Found");
-      return sendError(res, "User Profile Photo Not Found", 404);
+    if (!userMedia || !userMedia.data || userMedia.data.length === 0) {
+      logger.warn("User Media Not Found");
+      return sendError(res, "User Media Not Found", 404);
     }
+
+    const profileMedia = userMedia.data.find(media => media.type === "profile");
+    const coverMedia = userMedia.data.find(media => media.type === "cover");
 
     const enrichedUser = {
       ...user.toObject(),
-      profile_photo:
-        userProfilePhoto.data.type === "profile"
-          ? userProfilePhoto.data.url
-          : null,
-      cover_photo:
-        userProfilePhoto.data.type === "cover"
-          ? userProfilePhoto.data.url
-          : null,
+      profile_photo: profileMedia ? profileMedia.url : null,
+      cover_photo: coverMedia ? coverMedia.url : null,
       success: true,
     };
 
