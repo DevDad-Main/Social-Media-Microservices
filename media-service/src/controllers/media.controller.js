@@ -421,7 +421,7 @@ export const uploadPostMedia = catchAsync(async (req, res, next) => {
 //#region Upload Story Media
 export const uploadStoryMedia = catchAsync(async (req, res, next) => {
   const { storyId, userId } = req.body;
-  const image = req.file;
+  const media = req.file;
 
   if (!storyId) {
     logger.warn(`Post Id Not Found: ${storyId}`);
@@ -437,30 +437,30 @@ export const uploadStoryMedia = catchAsync(async (req, res, next) => {
     );
   }
 
-  if (!image) {
-    logger.warn("No image provided");
-    return sendError(res, "No image provided", 400);
+  if (!media) {
+    logger.warn("No media provided");
+    return sendError(res, "No media provided", 400);
   }
 
-  console.log("DEBUG: image = ", image);
+  console.log("DEBUG: media = ", media);
 
   const result = {};
   try {
-    if (image) {
+    if (media) {
       try {
-        logger.info("About to call uploadPostsMedia with storyId:", {
+        logger.info("About to call uploadStoryMediaFiles with storyId:", {
           storyId,
         });
-        const storyImage = await uploadStoryMediaFiles(image, storyId, userId);
-        logger.info("uploadPostsMedia returned:", { storyImage });
+        const storyMedia = await uploadStoryMediaFiles(media, storyId, userId);
+        logger.info("uploadStoryMediaFiles returned:", { storyMedia });
 
-        if (!storyImage) {
-          logger.warn("postImage is undefined after uploadStoryMedia");
-          return sendError(res, "Failed to upload story image", 500);
+        if (!storyMedia) {
+          logger.warn("storyMedia is undefined after uploadStoryMedia");
+          return sendError(res, "Failed to upload story media", 500);
         }
 
         result.media = {
-          url: storyImage.url,
+          url: storyMedia.url,
         };
 
         console.log("DEBUG: result.media = ", result.media);

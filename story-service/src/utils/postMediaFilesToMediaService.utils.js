@@ -27,7 +27,7 @@ export const postMediaFileToMediaServiceForProcessing = async (
 
   formData.append("storyId", storyId);
   formData.append("userId", userId);
-  formData.append("image", file.buffer, {
+  formData.append("media", file.buffer, {
     filename: file.originalname,
     contentType: file.mimetype,
   });

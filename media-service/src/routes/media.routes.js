@@ -20,7 +20,7 @@ mediaRouter.post(
   uploadPostMedia,
 );
 
-mediaRouter.post("/story-media-file", upload.single("image"), uploadStoryMedia);
+mediaRouter.post("/story-media-file", upload.single("media"), uploadStoryMedia);
 
 //NOTE: Registration media upload (special route for new users)
 mediaRouter.post(

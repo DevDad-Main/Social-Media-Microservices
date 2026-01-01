@@ -29,7 +29,7 @@ export const addStory = catchAsync(async (req, res, next) => {
 
   console.log("REQ.BODY = ", req.body);
 
-  const image = req.file;
+  const media = req.file;
 
   const story = await Story.create({
     user: userId,
@@ -39,24 +39,28 @@ export const addStory = catchAsync(async (req, res, next) => {
   });
 
   let mediaURL = "";
-  if (media_type === "image") {
+  if (media_type === "image" || media_type === "video") {
     try {
       const mediaUploadResult = await postMediaFileToMediaServiceForProcessing(
         story._id.toString(),
-        image,
+        media,
         userId,
       );
       console.log("DEBUG: mediaUploadResult = ", mediaUploadResult);
       mediaURL = mediaUploadResult.data.media.url;
     } catch (error) {
-      logger.error("Failed to process image", { error });
-      return sendError(res, error?.message || "Failed to process image", 500);
+      logger.error(`Failed to process ${media_type}`, { error });
+      return sendError(
+        res,
+        error?.message || `Failed to process ${media_type}`,
+        500,
+      );
     }
   }
 
   const enrichedStory = {
     ...story.toObject(),
-    media: mediaURL,
+    media_url: mediaURL,
   };
 
   //TODO: Later add our inngest functions to delete stories in 24 hours. -> Even better check if RabbitMQ can handle this
@@ -68,26 +72,26 @@ export const addStory = catchAsync(async (req, res, next) => {
 
 //#region Fetch Story
 export const getStories = catchAsync(async (req, res, next) => {
-  const userId = req.user._id?.toString();
-
-  if (!userId) {
-    logger.warn("User Not Authenticated");
-    return sendError(res, "User Not Authenticated", 401);
-  }
-
-  const cacheKey = `stories`;
-  // const cachedPosts = await req.redisClient.get(cacheKey);
-  //
-  // if (cachedPosts) {
-  //   return sendSuccess(
-  //     res,
-  //     JSON.parse(cachedPosts),
-  //     "Stories retrieved successfully (cached)",
-  //     200,
-  //   );
-  // }
-
   try {
+    const userId = req.user._id?.toString();
+
+    if (!userId) {
+      logger.warn("User Not Authenticated");
+      return sendError(res, "User Not Authenticated", 401);
+    }
+
+    const cacheKey = `stories`;
+    // const cachedPosts = await req.redisClient.get(cacheKey);
+    //
+    // if (cachedPosts) {
+    //   return sendSuccess(
+    //     res,
+    //     JSON.parse(cachedPosts),
+    //     "Stories retrieved successfully (cached)",
+    //     200,
+    //   );
+    // }
+
     // Fetch current user's full data from user service to get connections and following
     const currentUser = await getUserByIdFromUserService(userId);
 
@@ -108,7 +112,7 @@ export const getStories = catchAsync(async (req, res, next) => {
 
     // Use aggregation pipeline from utils to fetch stories with user data and media
     const stories = await Story.aggregate(
-      getStoriesAggregationPipeline(userIds),
+      getStoriesAggregationPipeline(userIds, userId),
     );
 
     logger.info("Stories fetched successfully", {
@@ -151,7 +155,7 @@ export const deleteStory = catchAsync(async (req, res, next) => {
 
     await clearRedisStoriesCache(req);
 
-    return sendSuccess(res, "Story deleted successfully", 200);
+    return sendSuccess(res, {}, "Story deleted successfully", 200);
   } catch (error) {
     logger.warn("Failed to delete story", { error });
     return sendError(res, error.message || "Failed to delete story", 500);

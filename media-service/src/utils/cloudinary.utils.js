@@ -15,27 +15,33 @@ cloudinary.config({
 
 //#region Upload Image With Retries And Return Secure URL Utility Function
 async function uploadImageWithRetriesAndReturnSecureUrl(buffer) {
+  return uploadMediaWithRetriesAndReturnSecureUrl(buffer, "image");
+}
+//#endregion
+
+//#region Upload Media With Retries And Return Secure URL Utility Function
+async function uploadMediaWithRetriesAndReturnSecureUrl(buffer, resourceType = "image") {
   let cloudinaryResponse;
   let retries = 3;
 
   while (retries > 0) {
     try {
-      cloudinaryResponse = await uploadMediaBufferToCloudinary(buffer);
+      cloudinaryResponse = await uploadMediaBufferToCloudinary(buffer, resourceType);
       break;
     } catch (error) {
       retries--;
       if (retries === 0) {
-        logger.error("Cloudinary upload failed after 3 retries: ", error);
-        throw new AppError("Cloudinary upload failed", 500);
+        logger.error(`Cloudinary ${resourceType} upload failed after 3 retries: `, error);
+        throw new AppError(`Cloudinary ${resourceType} upload failed`, 500);
       }
-      logger.warn(`Cloudinary upload failed, retrying... (${3 - retries}/3)`);
+      logger.warn(`Cloudinary ${resourceType} upload failed, retrying... (${3 - retries}/3)`);
       await new Promise((resolve) => setTimeout(resolve, 2000));
     }
   }
 
   if (!cloudinaryResponse.secure_url) {
-    logger.error("Cloudinary upload failed");
-    throw new AppError("Cloudinary upload failed", 500);
+    logger.error(`Cloudinary ${resourceType} upload failed`);
+    throw new AppError(`Cloudinary ${resourceType} upload failed`, 500);
   }
 
   return cloudinaryResponse;
@@ -69,8 +75,10 @@ export const uploadStoryMediaFiles = async (file, storyId, user) => {
   const { originalname, mimetype, buffer } = file;
 
   try {
+    // Determine resource type based on mimetype
+    const resourceType = mimetype.startsWith('video/') ? 'video' : 'image';
     const cloudinaryResponse =
-      await uploadImageWithRetriesAndReturnSecureUrl(buffer);
+      await uploadMediaWithRetriesAndReturnSecureUrl(buffer, resourceType);
 
     const created = await StoryMedia.create({
       publicId: cloudinaryResponse.public_id,

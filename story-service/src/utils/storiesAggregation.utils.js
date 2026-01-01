@@ -1,12 +1,18 @@
 import mongoose from "mongoose";
 
-export const getStoriesAggregationPipeline = (userIds) => [
+export const getStoriesAggregationPipeline = (userIds, currentUserId) => [
   {
     $match: {
       user: { $in: userIds.map((id) => new mongoose.Types.ObjectId(id)) },
       createdAt: {
         $gte: new Date(Date.now() - 24 * 60 * 60 * 1000),
       },
+    },
+  },
+  // Preserve original user ID before lookups
+  {
+    $addFields: {
+      originalUserId: "$user",
     },
   },
 
@@ -30,6 +36,13 @@ export const getStoriesAggregationPipeline = (userIds) => [
     },
   },
   { $unwind: "$user" },
+
+  // Preserve original user ID before population
+  {
+    $addFields: {
+      originalUserId: "$user._id",
+    },
+  },
 
   // User profile media
   {
@@ -68,6 +81,9 @@ export const getStoriesAggregationPipeline = (userIds) => [
           input: { $arrayElemAt: ["$media", 0] },
         },
       },
+      isOwner: {
+        $eq: ["$originalUserId", new mongoose.Types.ObjectId(currentUserId)],
+      },
     },
   },
 
@@ -82,6 +98,7 @@ export const getStoriesAggregationPipeline = (userIds) => [
       updatedAt: 1,
       media_url: 1,
       profile_photo: 1,
+      isOwner: 1,
       user: {
         _id: "$user._id",
         username: "$user.username",
