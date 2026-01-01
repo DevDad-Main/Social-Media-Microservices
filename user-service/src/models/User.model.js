@@ -95,6 +95,13 @@ userSchema.methods.comparePassword = async function (passwordToCompare) {
 
 userSchema.index({ username: "text" });
 
+userSchema.index({
+  username: "text",
+  fullName: "text",
+  email: "text",
+  location: "text",
+});
+
 /**
  * Mongoose User Model - Represents user accounts with authentication and social features
  * @type {import('mongoose').Model<User>}

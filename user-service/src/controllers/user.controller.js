@@ -15,6 +15,7 @@ import { clearRedisUserCache } from "../utils/cleanRedisCache.utils.js";
 import { publishEvent as publishRabbitMQEvent } from "../utils/rabbitmq.utils.js";
 import { Connection } from "../models/Connection.model.js";
 import { sendUserMediaToMediaService } from "../utils/sendUserMediaToMediaService.utils.js";
+import { getUsersSearchAggregation } from "../utils/getUsersSearchAggregation.utils.js";
 
 const MAX_CONNECTION_REQUESTS = 2;
 
@@ -735,27 +736,31 @@ export const usersSearch = catchAsync(async (req, res, next) => {
   }
 
   const cacheKey = `users-search:${query}`;
-  const cachedPostsSearch = await req.redisClient.get(cacheKey);
+  // const cachedPostsSearch = await req.redisClient.get(cacheKey);
+  //
+  // if (cachedPostsSearch) {
+  //   return sendSuccess(
+  //     res,
+  //     JSON.parse(cachedPostsSearch),
+  //     "User Searches retrieved successfully",
+  //     200,
+  //   );
+  // }
 
-  if (cachedPostsSearch) {
-    return sendSuccess(
-      res,
-      JSON.parse(cachedPostsSearch),
-      "User Searches retrieved successfully",
-      200,
-    );
-  }
+  const users = await User.aggregate(
+    getUsersSearchAggregation(query, req.user._id),
+  );
 
   // Finding all users that match the search request
-  const users = await User.find({
-    // _id: { $ne: req.user._id }, // Not Equal to operator, we exclude the logged in user
-    $or: [
-      { username: { $regex: query, $options: "i" } },
-      { email: { $regex: query, $options: "i" } },
-      { fullName: { $regex: query, $options: "i" } },
-      { location: { $regex: query, $options: "i" } },
-    ],
-  }).limit(20);
+  // const users = await User.find({
+  //   // _id: { $ne: req.user._id }, // Not Equal to operator, we exclude the logged in user
+  //   $or: [
+  //     { username: { $regex: query, $options: "i" } },
+  //     { email: { $regex: query, $options: "i" } },
+  //     { fullName: { $regex: query, $options: "i" } },
+  //     { location: { $regex: query, $options: "i" } },
+  //   ],
+  // }).limit(20);
 
   logger.info(`Searched for ${query} and got ${users.length} results: `, users);
 
