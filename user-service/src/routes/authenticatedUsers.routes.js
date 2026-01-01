@@ -20,7 +20,7 @@ authenticatedUsersRouter.use(authenticateUserMiddleware);
 authenticatedUsersRouter.get("/profile/:id", getUserProfile);
 authenticatedUsersRouter.get("/get-user", fetchUser);
 
-authenticatedUsersRouter.post(
+authenticatedUsersRouter.put(
   "/update-user",
   updateUserValidation,
   updateUserProfile,

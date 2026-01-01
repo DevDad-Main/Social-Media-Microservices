@@ -2,11 +2,16 @@ import axios from "axios";
 import FormData from "form-data";
 import { AppError, logger } from "devdad-express-utils";
 import { isValidObjectId } from "mongoose";
+import { clearRedisUserCache } from "./cleanRedisCache.utils.js";
 
 const MEDIA_SERVICE_URL =
   process.env.MEDIA_SERVICE_URL || "http://media-service:3003";
 
-export const sendUserMediaToMediaService = async (userId, files) => {
+export const sendUserMediaToMediaService = async (
+  userId,
+  files,
+  req = null,
+) => {
   try {
     if (!userId || !files) {
       logger.warn("Missing userId or files for media upload");
@@ -51,6 +56,20 @@ export const sendUserMediaToMediaService = async (userId, files) => {
     );
 
     logger.info("Media uploaded successfully for user:", userId);
+
+    // Clear user cache when media is updated
+    if (req) {
+      try {
+        await clearRedisUserCache(req, userId);
+        console.log(
+          "DEBUG: Cleared user cache after media upload for user:",
+          userId,
+        );
+      } catch (cacheError) {
+        console.error("Failed to clear cache after media upload:", cacheError);
+      }
+    }
+
     return response.data;
   } catch (error) {
     logger.error("Failed to send user media to media service:", {

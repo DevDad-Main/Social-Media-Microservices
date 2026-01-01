@@ -60,7 +60,7 @@ export const registerUser = catchAsync(async (req, res, next) => {
 
   if (req.files && (req.files.profile_photo || req.files.cover_photo)) {
     try {
-      await sendUserMediaToMediaService(user._id.toString(), req.files);
+      await sendUserMediaToMediaService(user._id.toString(), req.files, req);
     } catch (mediaError) {
       logger.error("Failed to upload media during registration:", {
         error: mediaError,
@@ -78,6 +78,9 @@ export const registerUser = catchAsync(async (req, res, next) => {
   });
 
   await clearRedisUsersSearchCache(req);
+
+  // Clear any potential stale cache for this new user
+  await clearRedisUserCache(req, user._id);
 
   return sendSuccess(res, user, "User Registered Successfully", 201);
 });
@@ -203,6 +206,7 @@ export const logoutUser = catchAsync(async (req, res, next) => {
 //#region Get User By Id (Frontend API Call)
 export const getUserProfile = catchAsync(async (req, res, next) => {
   const { id } = req.params;
+  const { bust } = req.query; // Cache busting parameter for testing
 
   if (!id) {
     logger.warn("User Id Not Found");
@@ -214,16 +218,32 @@ export const getUserProfile = catchAsync(async (req, res, next) => {
     return sendError(res, `ID: ${id} is not a valid MongoDB ObjectId`, 400);
   }
 
-  //NOTE: Check cache first
+  //NOTE: Check cache first (unless busting)
   const cacheKey = `user_profile:${id}`;
-  const cachedProfile = await req.redisClient.get(cacheKey);
-  if (cachedProfile) {
-    return sendSuccess(
-      res,
-      JSON.parse(cachedProfile),
-      "User Profile Fetched (cached)",
-      200,
-    );
+  const cachedProfile = bust ? null : await req.redisClient.get(cacheKey);
+  console.log("DEBUG: cachedProfile for user ${id} = ", cachedProfile);
+  console.log("DEBUG: Cache exists = ", !!cachedProfile);
+  console.log("DEBUG: Cache busting = ", bust);
+  
+  if (cachedProfile && !bust) {
+    try {
+      const parsedCache = JSON.parse(cachedProfile);
+      // Validate cached data has required structure before returning
+      if (parsedCache && parsedCache.profile && parsedCache.profile._id) {
+        return sendSuccess(
+          res,
+          parsedCache,
+          "User Profile Fetched (cached)",
+          200,
+        );
+      } else {
+        console.log("DEBUG: Invalid cache structure, clearing and refetching");
+        await req.redisClient.del(cacheKey);
+      }
+    } catch (parseError) {
+      console.log("DEBUG: Cache parse error, clearing and refetching", parseError);
+      await req.redisClient.del(cacheKey);
+    }
   }
 
   //NOTE: Use aggregation pipeline to fetch all required data
@@ -233,6 +253,8 @@ export const getUserProfile = catchAsync(async (req, res, next) => {
     logger.warn("User Not Found");
     return sendError(res, "User Not Found", 404);
   }
+
+  console.log("DEBUG: Fresh profile data fetched for user:", id);
 
   //NOTE: Structure the response to match frontend expectations
   const enrichedProfile = {
@@ -262,6 +284,8 @@ export const getUserProfile = catchAsync(async (req, res, next) => {
     "EX",
     300,
   ); // 5 minutes TTL
+
+  console.log("DEBUG: Cached new profile data for user:", id);
 
   return sendSuccess(res, enrichedProfile, "User Profile Fetched", 200);
 });
@@ -652,7 +676,7 @@ export const fetchUser = catchAsync(async (req, res, next) => {
 
     logger.info("DEBUG: Fetch User By Profile Id - userId = ", userId);
 
-    const user = await User.findById(userId);
+    const user = await User.findById(userId).select("-password");
 
     if (!user) {
       logger.warn("User Not Found with ID: " + userId);
