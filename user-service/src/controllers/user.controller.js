@@ -696,8 +696,10 @@ export const fetchUser = catchAsync(async (req, res, next) => {
       return sendError(res, "User Media Not Found", 404);
     }
 
-    const profileMedia = userMedia.data.find(media => media.type === "profile");
-    const coverMedia = userMedia.data.find(media => media.type === "cover");
+    const profileMedia = userMedia.data.find(
+      (media) => media.type === "profile",
+    );
+    const coverMedia = userMedia.data.find((media) => media.type === "cover");
 
     const enrichedUser = {
       ...user.toObject(),
@@ -716,5 +718,56 @@ export const fetchUser = catchAsync(async (req, res, next) => {
     logger.error("Failed to fetch user", { error });
     return sendError(res, error.message, error.status || 500, { error });
   }
+});
+//#endregion
+
+//#region Search Users
+export const usersSearch = catchAsync(async (req, res, next) => {
+  const { query } = req.query;
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    const errorMessages = errors.array().map((error) => error.msg);
+    logger.warn("Registration Validation Error: ", { errorMessages });
+    return sendError(res, errorMessages.join(", "), 400);
+  }
+
+  console.log("Searching for users with query: ", { query });
+  console.log("REQ.BODY", { body: req.body });
+
+  if (!query) {
+    logger.warn("Missing query parameter");
+    return sendError(res, "Missing query parameter", 400);
+  }
+
+  const cacheKey = `users-search:${query}`;
+  const cachedPostsSearch = await req.redisClient.get(cacheKey);
+
+  if (cachedPostsSearch) {
+    return sendSuccess(
+      res,
+      JSON.parse(cachedPostsSearch),
+      "User Searches retrieved successfully",
+      200,
+    );
+  }
+
+  // Finding all users that match the search request
+  const users = await User.find({
+    // _id: { $ne: req.user._id }, // Not Equal to operator, we exclude the logged in user
+    $or: [
+      { username: { $regex: query, $options: "i" } },
+      { email: { $regex: query, $options: "i" } },
+      { fullName: { $regex: query, $options: "i" } },
+      { location: { $regex: query, $options: "i" } },
+    ],
+  }).limit(20);
+
+  logger.info(`Searched for ${query} and got ${users.length} results: `, users);
+
+  // NOTE: We cache the Post Search results for roughly 2-3 mins
+  await req.redisClient.set(cacheKey, JSON.stringify(users), "EX", 180);
+
+  return sendSuccess(res, users, "User Searches retrieved successfully", 200);
 });
 //#endregion

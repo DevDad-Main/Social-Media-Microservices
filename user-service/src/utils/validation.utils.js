@@ -1,10 +1,11 @@
 import { AppError } from "devdad-express-utils";
 import { User } from "../models/User.model.js";
-import { body } from "express-validator";
+import { body, query } from "express-validator";
 import {
   validateUsername,
   validateName,
   validatePassword,
+  validateSearchQuery,
 } from "./safeRegex.utils.js";
 
 //#region Register User Validation
@@ -117,5 +118,15 @@ export const updateUserValidation = [
         );
       }
     }),
+];
+//#endregion
+
+//#region User search Validation
+export const usersSearchValidation = [
+  query("query")
+    .notEmpty()
+    .withMessage("Search Query is required!")
+    .trim()
+    .custom(validateSearchQuery),
 ];
 //#endregion

@@ -251,7 +251,6 @@ app.use(
       );
       return proxyResData;
     },
-    parseReqBody: false,
   }),
 );
 //#endregion
