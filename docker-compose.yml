@@ -11,7 +11,6 @@ services:
       - user-service
       - post-service
       - media-service
-      - search-service
       - story-service
       - comment-service
       - notification-service
@@ -22,7 +21,6 @@ services:
       USER_SERVICE_URL: http://user-service:3001
       POST_SERVICE_URL: http://post-service:3002
       MEDIA_SERVICE_URL: http://media-service:3003
-      SEARCH_SERVICE_URL: http://search-service:3004
       STORY_SERVICE_URL: http://story-service:3005
       COMMENT_SERVICE_URL: http://comment-service:3006
       NOTIFICATION_SERVICE_URL: http://notification-service:3007
@@ -89,20 +87,6 @@ services:
     #   - 1.1.1.1
     # extra_hosts:
     #   - "api.cloudinary.com:44.223.246.183"
-
-  search-service:
-    build: ./search-service
-    env_file:
-      - ./search-service/.env
-    depends_on:
-      - redis
-      - rabbitmq
-    environment:
-      NODE_ENV: development
-      REDIS_URL: redis://redis:6379
-      RABBITMQ_URL: amqp://rabbitmq:5672
-    volumes:
-      - ./search-service/src:/usr/src/app/src
 
   comment-service:
     build: ./comment-service

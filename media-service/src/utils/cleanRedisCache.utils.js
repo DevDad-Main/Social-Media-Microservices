@@ -8,14 +8,6 @@ export async function clearRedisPostsCache(req) {
   }
 }
 
-export async function clearRedisPostsSearchCache(req) {
-  const keys = await req.redisClient.keys("posts-search:*");
-
-  if (Array.isArray(keys) && keys.length > 0) {
-    await req.redisClient.unlink(keys);
-  }
-}
-
 export async function clearRedisPostCache(req, input) {
   const cachedPostKey = `post:${input}`;
 

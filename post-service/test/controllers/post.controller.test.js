@@ -42,7 +42,6 @@ vi.mock("../../src/utils/rabbitmq.utils.js", () => ({
 vi.mock("../../src/utils/cleanRedisCache.utils.js", () => ({
   clearRedisPostCache: vi.fn().mockResolvedValue(),
   clearRedisPostsCache: vi.fn().mockResolvedValue(),
-  clearRedisPostsSearchCache: vi.fn().mockResolvedValue(),
 }));
 
 describe("Post Controller Integration Tests", () => {

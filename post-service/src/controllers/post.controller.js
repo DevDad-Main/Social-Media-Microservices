@@ -10,7 +10,6 @@ import {
 import {
   clearRedisPostCache,
   clearRedisPostsCache,
-  clearRedisPostsSearchCache,
 } from "../utils/cleanRedisCache.utils.js";
 import { publishEvent as publishRabbitMQEvent } from "../utils/rabbitmq.utils.js";
 import {
@@ -88,7 +87,6 @@ export const createPost = catchAsync(async (req, res, next) => {
   try {
     await Promise.all([
       clearRedisPostsCache(req),
-      clearRedisPostsSearchCache(req),
     ]);
   } catch (error) {
     logger.error(error?.message || "Failed to clear cache", { error });
@@ -284,7 +282,6 @@ export const updatePost = catchAsync(async (req, res, next) => {
     await Promise.all([
       clearRedisPostCache(req, postId),
       clearRedisPostsCache(req),
-      clearRedisPostsSearchCache(req),
     ]);
   } catch (error) {
     logger.error("Failed to clear cache after update", { error });
@@ -323,7 +320,6 @@ export const deletePostById = catchAsync(async (req, res, next) => {
     await Promise.all([
       clearRedisPostCache(req, postToDelete._id.toString()),
       clearRedisPostsCache(req),
-      clearRedisPostsSearchCache(req),
     ]);
   } catch (error) {
     logger.error(error?.message || "Failed to clear cache", { error });

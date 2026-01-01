@@ -40,7 +40,6 @@ vi.mock("../src/utils/cleanRedisCache.utils.js", () => ({
   clearRedisUserMediaCache: vi.fn(),
   clearRedisUserProfileCache: vi.fn(),
   clearRedisPostsCache: vi.fn(),
-  clearRedisPostsSearchCache: vi.fn(),
 }));
 
 beforeAll(async () => {

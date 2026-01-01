@@ -12,7 +12,6 @@ vi.mock('../src/utils/rabbitmq.utils.js', () => ({
 // Mock cache clearing
 vi.mock('../src/utils/cleanRedisCache.utils.js', () => ({
   clearRedisUserCache: vi.fn().mockResolvedValue(),
-  clearRedisUsersSearchCache: vi.fn().mockResolvedValue(),
 }));
 
 // Mock media service

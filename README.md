@@ -160,13 +160,10 @@ cp user-service/.env.example user-service/.env
    # Post Service
    cd post-service && npm install && cd ..
 
-   # Media Service
-   cd media-service && npm install && cd ..
-
-   # Search Service
-   cd search-service && npm install && cd ..
-
-   # Story Service
+# Media Service
+    cd media-service && npm install && cd ..
+ 
+    # Story Service
    cd story-service && npm install && cd ..
 
    # Comment Service
@@ -193,10 +190,7 @@ cp user-service/.env.example user-service/.env
    # Terminal 4: Media Service
    cd media-service && npm run dev
 
-   # Terminal 5: Search Service
-   cd search-service && npm run dev
-
-   # Terminal 6: Story Service
+# Terminal 5: Story Service
    cd story-service && npm run dev
 
    # Terminal 7: Comment Service
@@ -214,20 +208,11 @@ The application uses RabbitMQ for inter-service communication:
 
 - **post.created**: Published when a post is created, consumed by Search Service to index post
 - **post.deleted**: Published when a post is deleted, consumed by Search Service (removes index) and Media Service (deletes associated media files)
-- **post.liked**: Published when a post is liked/unliked, consumed by Notification Service and other services for analytics
+- **post.liked**: Published when a post is liked/unliked, consumed by Notification Service
 - **comment.created**: Published when a comment is created, consumed by Notification Service
-- **user.created**: Published when a new user registers, consumed by other services for analytics
-- **user.updated**: Published when user profile is updated, consumed by other services for data consistency
 - **connectionReq.sent**: Published when a user sends a connection request, consumed by Notification Service
 
 ### Consumed Events:
-
-#### Search Service:
-
-- **post.created**: Indexes new posts for search functionality
-- **post.deleted**: Removes deleted posts from search index
-- **user.created**: Indexes new users for search functionality
-- **user.updated**: Updates user data in search index
 
 #### Media Service:
 
@@ -261,9 +246,6 @@ cd post-service && npm test
 
 # Media Service tests (✅ Complete)
 cd media-service && npm test
-
-# Search Service tests (✅ Complete)
-cd search-service && npm test
 
 # Story Service tests (⚠️ Partial - model tests only)
 cd story-service && npm test
@@ -308,8 +290,8 @@ Tests use MongoDB Memory Server for isolated database testing and Vitest as the 
 
 ### Search (Protected)
 
-- `GET /v1/search/posts?query=search_term` - Search posts by content
-- `GET /v1/search/users?query=search_term` - Search users by username
+- `GET /v1/search/posts?query=search_term` - Search posts by content *(moved to post-service when needed)*
+- `GET /v1/search/users?query=search_term` - Search users by username *(now in user-service)*
 
 ### Stories (Protected)
 

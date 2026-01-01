@@ -11,10 +11,7 @@ import { validationResult } from "express-validator";
 import { fetchMediaByUserId } from "../utils/fetchUrlsFromMediaService.utils.js";
 import { isValidObjectId } from "mongoose";
 import { getUserProfileAggregation } from "../utils/getUserProfileAggregation.utils.js";
-import {
-  clearRedisUserCache,
-  clearRedisUsersSearchCache,
-} from "../utils/cleanRedisCache.utils.js";
+import { clearRedisUserCache } from "../utils/cleanRedisCache.utils.js";
 import { publishEvent as publishRabbitMQEvent } from "../utils/rabbitmq.utils.js";
 import { Connection } from "../models/Connection.model.js";
 import { sendUserMediaToMediaService } from "../utils/sendUserMediaToMediaService.utils.js";
@@ -77,8 +74,6 @@ export const registerUser = catchAsync(async (req, res, next) => {
     searchTerm: user.username,
     userCreatedAt: user.createdAt,
   });
-
-  await clearRedisUsersSearchCache(req);
 
   // Clear any potential stale cache for this new user
   await clearRedisUserCache(req, user._id);
@@ -351,7 +346,6 @@ export const updateUserProfile = catchAsync(async (req, res, next) => {
     });
 
     await clearRedisUserCache(req, userToUpdate._id);
-    await clearRedisUsersSearchCache(req);
 
     return sendSuccess(
       res,

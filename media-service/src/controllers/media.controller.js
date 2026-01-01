@@ -16,7 +16,6 @@ import { PostMedia } from "../models/PostMedia.model.js";
 import { isValidObjectId } from "mongoose";
 import {
   clearRedisPostsCache,
-  clearRedisPostsSearchCache,
   clearRedisUserMediaCache,
   clearRedisUserProfileCache,
 } from "../utils/cleanRedisCache.utils.js";
@@ -407,7 +406,6 @@ export const uploadPostMedia = catchAsync(async (req, res, next) => {
     }
 
     // Clear relevant caches when user media is uploaded
-    await clearRedisPostsSearchCache(req);
     await clearRedisPostsCache(req);
 
     return sendSuccess(res, result, "Post Media uploaded successfully", 201);
@@ -471,7 +469,6 @@ export const uploadStoryMedia = catchAsync(async (req, res, next) => {
     }
 
     // Clear relevant caches when user media is uploaded
-    await clearRedisPostsSearchCache(req);
     await clearRedisPostsCache(req);
 
     console.log("DEBUG: result = ", result);
