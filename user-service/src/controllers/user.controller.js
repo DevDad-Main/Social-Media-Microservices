@@ -9,13 +9,18 @@ import {
 import { RefreshToken } from "../models/RefreshToken.model.js";
 import { validationResult } from "express-validator";
 import { fetchMediaByUserId } from "../utils/fetchUrlsFromMediaService.utils.js";
-import { isValidObjectId } from "mongoose";
+import mongoose, { isValidObjectId } from "mongoose";
 import { getUserProfileAggregation } from "../utils/getUserProfileAggregation.utils.js";
-import { clearRedisUserCache } from "../utils/cleanRedisCache.utils.js";
+import {
+  clearRedisUserCache,
+  clearRedisUserConnectionsCache,
+  clearRedisConnectionsCacheForMultipleUsers,
+} from "../utils/cleanRedisCache.utils.js";
 import { publishEvent as publishRabbitMQEvent } from "../utils/rabbitmq.utils.js";
 import { Connection } from "../models/Connection.model.js";
 import { sendUserMediaToMediaService } from "../utils/sendUserMediaToMediaService.utils.js";
 import { getUsersSearchAggregation } from "../utils/getUsersSearchAggregation.utils.js";
+import { getUserConnectionsAggregation } from "../utils/getUserConnectionsAggregation.utils.js";
 
 const MAX_CONNECTION_REQUESTS = 2;
 
@@ -504,6 +509,9 @@ export const sendConnectionRequest = catchAsync(async (req, res, next) => {
         entityId: fromUser._id,
       });
 
+      // Clear connections cache for the user who received the request (pending connections changed)
+      await clearRedisUserConnectionsCache(req, id);
+
       return sendSuccess(res, {}, "Connection Request Sent", 201);
     } catch (error) {
       logger.error("Failed to create connection", { error });
@@ -550,6 +558,12 @@ export const acceptConnectionRequests = catchAsync(async (req, res, next) => {
     await Connection.findByIdAndUpdate(connection._id, {
       $set: { status: "accepted" },
     });
+
+    // Clear connections cache for both users
+    await clearRedisConnectionsCacheForMultipleUsers(req, [
+      userId.toString(),
+      id.toString(),
+    ]);
   } catch (error) {
     logger.error("Failed to accept connection", { error });
     return sendError(res, error.message, error.status || 500, { error });
@@ -561,41 +575,164 @@ export const acceptConnectionRequests = catchAsync(async (req, res, next) => {
 export const getUserConnections = async (req, res) => {
   try {
     const userId = req.user._id;
+    const { bust } = req.query; // Cache busting parameter for testing
 
     if (!isValidObjectId(userId)) return sendError(res, "Invalid user ID", 400);
 
-    const user = await User.findById(userId).populate(
-      "connections followers following",
+    // Check cache first (unless busting)
+    const cacheKey = `user_connections:${userId}`;
+    const cachedConnections = bust ? null : await req.redisClient.get(cacheKey);
+
+    if (cachedConnections && !bust) {
+      try {
+        const parsedCache = JSON.parse(cachedConnections);
+        // Validate cached data has required structure before returning
+        if (
+          parsedCache &&
+          (parsedCache.connections ||
+            parsedCache.followers ||
+            parsedCache.following)
+        ) {
+          return sendSuccess(
+            res,
+            parsedCache,
+            "User Connections Fetched (cached)",
+            200,
+          );
+        } else {
+          console.log(
+            "DEBUG: Invalid cache structure, clearing and refetching",
+          );
+          await req.redisClient.del(cacheKey);
+        }
+      } catch (parseError) {
+        console.log(
+          "DEBUG: Cache parse error, clearing and refetching",
+          parseError,
+        );
+        await req.redisClient.del(cacheKey);
+      }
+    }
+
+    // Use aggregation pipeline to fetch user connections with profile photos
+    const [userData] = await User.aggregate(
+      getUserConnectionsAggregation(userId),
     );
 
-    if (!user) {
+    if (!userData) {
       logger.warn(`User Not Found: ${userId}`);
       return sendError(res, `User Not Found: ${userId}`, 404);
     }
 
-    const { connections, followers, following } = user;
+    let pendingConnections = [];
 
-    const pendingConnections = (
-      await Connection.find({ to_user_id: userId, status: "pending" }).populate(
-        "from_user_id",
-      )
-    ).map((connection) => connection.from_user_id);
+    try {
+      // Get pending connections and convert to plain objects
+      pendingConnections = await Connection.aggregate([
+        {
+          $match: {
+            to_user_id: new mongoose.Types.ObjectId(userId),
+            status: "pending",
+          },
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "from_user_id",
+            foreignField: "_id",
+            as: "user",
+          },
+        },
+        { $unwind: "$user" },
+        {
+          $lookup: {
+            from: "usermedias",
+            let: { uid: "$user._id" },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $and: [
+                      { $eq: ["$user", "$$uid"] },
+                      { $eq: ["$type", "profile"] },
+                    ],
+                  },
+                },
+              },
+              { $sort: { createdAt: -1 } },
+              { $limit: 1 },
+              { $project: { _id: 0, url: 1 } },
+            ],
+            as: "profile_media",
+          },
+        },
+
+        {
+          $addFields: {
+            profile_photo: {
+              $ifNull: [{ $arrayElemAt: ["$profile_media.url", 0] }, null],
+            },
+          },
+        },
+
+        {
+          $project: {
+            _id: "$user._id",
+            fullName: "$user.fullName",
+            username: "$user.username",
+            email: "$user.email",
+            bio: "$user.bio",
+            location: "$user.location",
+            createdAt: "$user.createdAt",
+            updatedAt: "$user.updatedAt",
+            profile_photo: 1,
+          },
+        },
+      ]);
+      console.log("DEBUG: pendingConnections = ", pendingConnections);
+    } catch (error) {
+      logger.error(error.message || "Failed to get pending connections", {
+        error,
+      });
+      return sendError(res, error.message, error.status || 500, { error });
+    }
+
+    const connectionsData = {
+      connections: userData.connections || [],
+      followers: userData.followers || [],
+      following: userData.following || [],
+    };
 
     if (pendingConnections.length === 0) {
       logger.warn("No pending connections found || Something Went Wrong");
+
+      // Cache the result
+      await req.redisClient.set(
+        cacheKey,
+        JSON.stringify(connectionsData),
+        "EX",
+        600,
+      ); // 10 minutes TTL
+
       return sendSuccess(
         res,
-        { connections, followers, following },
+        connectionsData,
         "User Connections Successfully Fetched",
         200,
       );
     }
 
-    console.log(connections, followers, following, pendingConnections);
+    const fullData = {
+      ...connectionsData,
+      pendingConnections: pendingConnections || [],
+    };
+
+    // Cache the full result
+    await req.redisClient.set(cacheKey, JSON.stringify(fullData), "EX", 600); // 10 minutes TTL
 
     return sendSuccess(
       res,
-      { connections, followers, following, pendingConnections },
+      fullData,
       "User Connections Successfully Fetched",
       200,
     );
@@ -631,6 +768,12 @@ export const followUser = async (req, res) => {
       $addToSet: { followers: userId },
     });
 
+    // Clear connections cache for both users
+    await clearRedisConnectionsCacheForMultipleUsers(req, [
+      userId.toString(),
+      id.toString(),
+    ]);
+
     return sendSuccess(res, {}, "User Successfully Followed", 200);
   } catch (error) {
     logger.error("Failed to follow user", { error });
@@ -657,6 +800,12 @@ export const unfollowUser = async (req, res) => {
     await User.findByIdAndUpdate(id, {
       $pull: { followers: userId },
     });
+
+    // Clear connections cache for both users
+    await clearRedisConnectionsCacheForMultipleUsers(req, [
+      userId.toString(),
+      id.toString(),
+    ]);
 
     return sendSuccess(res, {}, "User Successfully Unfollowed", 200);
   } catch (error) {
@@ -736,16 +885,16 @@ export const usersSearch = catchAsync(async (req, res, next) => {
   }
 
   const cacheKey = `users-search:${query}`;
-  // const cachedPostsSearch = await req.redisClient.get(cacheKey);
-  //
-  // if (cachedPostsSearch) {
-  //   return sendSuccess(
-  //     res,
-  //     JSON.parse(cachedPostsSearch),
-  //     "User Searches retrieved successfully",
-  //     200,
-  //   );
-  // }
+  const cachedPostsSearch = await req.redisClient.get(cacheKey);
+
+  if (cachedPostsSearch) {
+    return sendSuccess(
+      res,
+      JSON.parse(cachedPostsSearch),
+      "User Searches retrieved successfully",
+      200,
+    );
+  }
 
   const users = await User.aggregate(
     getUsersSearchAggregation(query, req.user._id),

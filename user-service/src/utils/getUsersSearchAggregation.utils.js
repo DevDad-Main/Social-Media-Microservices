@@ -12,9 +12,9 @@ export const getUsersSearchAggregation = (query, excludeUserId) => {
   const matchStage = {
     $or: [
       { username: regex },
-      { email: regex },
       { fullName: regex },
       { location: regex },
+      { bio: regex },
     ],
   };
 

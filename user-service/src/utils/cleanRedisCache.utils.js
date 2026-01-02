@@ -15,6 +15,38 @@ export async function clearRedisUserCache(req, id) {
     console.log("DEBUG: Additional Redis Cache Keys cleared = ", relatedKeys);
     await req.redisClient.unlink(relatedKeys);
   }
+
+  // Clear user connections cache
+  const connectionsKeys = await req.redisClient.keys(`user_connections:${id}`);
+  if (Array.isArray(connectionsKeys) && connectionsKeys.length > 0) {
+    console.log("DEBUG: User Connections Cache Keys cleared = ", connectionsKeys);
+    await req.redisClient.unlink(connectionsKeys);
+  }
+}
+
+export async function clearRedisUserConnectionsCache(req, userId) {
+  const cacheKey = `user_connections:${userId}`;
+  await req.redisClient.unlink(cacheKey);
+  console.log("DEBUG: Cleared user connections cache for user:", userId);
+}
+
+export async function clearRedisConnectionsCacheForMultipleUsers(req, userIds) {
+  if (!Array.isArray(userIds)) return;
+  
+  const cacheKeys = userIds.map(id => `user_connections:${id}`);
+  const existingKeys = [];
+  
+  for (const key of cacheKeys) {
+    const exists = await req.redisClient.exists(key);
+    if (exists) {
+      existingKeys.push(key);
+    }
+  }
+  
+  if (existingKeys.length > 0) {
+    await req.redisClient.unlink(existingKeys);
+    console.log("DEBUG: Cleared connections cache for users:", existingKeys);
+  }
 }
 
 export async function clearRedisPostCache(req, input) {
