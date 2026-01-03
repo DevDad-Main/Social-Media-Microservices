@@ -28,6 +28,12 @@ import {
   trackOTPRequests,
   verifyOTP,
 } from "../utils/userAuthentication.utils.js";
+import {
+  createRegistrationSession,
+  deleteRegistrationSession,
+  getRegistrationSession,
+  reconstructFiles,
+} from "../utils/registrationSession.utils.js";
 
 const MAX_CONNECTION_REQUESTS = 2;
 
@@ -39,96 +45,286 @@ const HTTP_OPTIONS = {
 };
 //#endregion
 
-//#region Register User
+//#region Register User - Step 1: Store Data & Send OTP
 export const registerUser = catchAsync(async (req, res, next) => {
   const { firstName, lastName, email, username, password } = req.body;
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
     const errorMessages = errors.array().map((error) => error.msg);
-    logger.warn("Registration Validation Error: ", { errorMessages });
+    logger.warn("Registration Validation Error", {
+      errorMessages,
+      email,
+      username,
+    });
     return sendError(res, errorMessages.join(", "), 400);
   }
 
   const existingUser = await User.findOne({ $or: [{ username }, { email }] });
-
   if (existingUser) {
-    logger.warn("User Already Exists");
+    logger.warn("User Already Exists", {
+      email,
+      username,
+      existingUserId: existingUser._id,
+    });
     return sendError(res, "User Already Exists", 400);
   }
 
-  const userFullName = `${firstName} ${lastName}`;
-
-  await checkOTPRestrictions(email, next);
-  await trackOTPRequests(email, next);
-  await sendOTP(userFullName, email);
-
-  return sendSuccess(res, {}, "User Registered Stage 1 Completed", 201);
-});
-//#endregion
-
-//#region Verify Users OTP
-export const verifyUserOTP = catchAsync(async (req, res, next) => {
-  const { firstName, lastName, email, username, password, otp } = req.body;
-  const errors = validationResult(req);
-
-  if (!errors.isEmpty()) {
-    const errorMessages = errors.array().map((error) => error.msg);
-    logger.warn("Registration Validation Error: ", { errorMessages });
-    return sendError(res, errorMessages.join(", "), 400);
+  try {
+    await checkOTPRestrictions(email, next);
+    await trackOTPRequests(email, next);
+  } catch (error) {
+    logger.error("OTP restrictions check failed", {
+      email,
+      error: error.message,
+    });
+    return sendError(res, error.message, error.statusCode || 400);
   }
 
-  console.log("DEBUG: req.body = ", req.body);
-  console.log("DEBUG REGISTER ROUTE: req.files = ", req.files);
-
-  const existingUser = await User.findOne({ $or: [{ username }, { email }] });
-
-  if (existingUser) {
-    logger.warn("User Already Exists");
-    return sendError(res, "User Already Exists", 400);
-  }
-
-  const userFullName = `${firstName} ${lastName}`;
-
-  // TODO: add verify OTP logic here
-  const isVerified = await verifyOTP(email, otp, next);
-
-  const user = new User({
-    fullName: userFullName,
+  //  Store registration data in Redis with secure token
+  const userData = {
+    firstName,
+    lastName,
     email,
     username,
     password,
-    isVerified,
-  });
+  };
 
-  await user.save(); // NOTE: Trigger pre-save hash password hook
+  let registrationToken;
+  try {
+    registrationToken = await createRegistrationSession(userData, req.files);
+    logger.info("Registration session created", {
+      registrationToken: registrationToken.substring(0, 8) + "...",
+      email,
+      username,
+    });
+  } catch (error) {
+    logger.error("Failed to create registration session", {
+      email,
+      error: error.message,
+    });
+    return sendError(
+      res,
+      "Failed to process registration. Please try again.",
+      500,
+    );
+  }
 
-  if (req.files && (req.files.profile_photo || req.files.cover_photo)) {
+  const userFullName = `${firstName} ${lastName}`;
+  try {
+    await sendOTP(userFullName, email);
+    logger.info("OTP sent successfully", {
+      email,
+      registrationToken: registrationToken.substring(0, 8) + "...",
+    });
+  } catch (error) {
+    // Clean up session if OTP sending fails
+    await deleteRegistrationSession(registrationToken);
+    logger.error("Failed to send OTP, session cleaned up", {
+      email,
+      error: error.message,
+    });
+    return sendError(
+      res,
+      "Failed to send verification email. Please try again.",
+      500,
+    );
+  }
+
+  return sendSuccess(
+    res,
+    {
+      registrationToken,
+      message: "Please check your email for the verification code.",
+      expiresIn: "30 minutes",
+    },
+    "Registration initiated. Please verify your email.",
+    201,
+  );
+});
+//#endregion
+
+//#region Verify User OTP - Step 2: Complete Registration
+export const verifyUserOTP = catchAsync(async (req, res, next) => {
+  console.log("DEBUG: req.body =", req.body);
+  console.log("DEBUG: req.headers =", JSON.stringify(req.headers, null, 2));
+
+  const errors = validationResult(req);
+
+  // Early validation error check
+  if (!errors.isEmpty()) {
+    const errorMessages = errors.array().map((error) => error.msg);
+    logger.warn("OTP Verification Validation Error", {
+      errorMessages,
+      registrationToken: req.body?.registrationToken?.substring(0, 8) + "...",
+      body: req.body,
+    });
+    return sendError(res, errorMessages.join(", "), 400);
+  }
+
+  const body = req.body || {};
+  const { registrationToken, otp } = body;
+
+  // Validate that required fields are present
+  if (!registrationToken) {
+    logger.error("Missing registrationToken in request body", { body });
+    return sendError(res, "Registration token is required.", 400);
+  }
+
+  if (!otp) {
+    logger.error("Missing otp in request body", { body });
+    return sendError(res, "OTP is required.", 400);
+  }
+
+  console.log(
+    "DEBUG: Verification request - Token:",
+    registrationToken?.substring(0, 8) + "...",
+    "OTP:",
+    otp,
+  );
+
+  //  Retrieve registration data from Redis
+  let registrationSession;
+  try {
+    registrationSession = await getRegistrationSession(registrationToken);
+  } catch (error) {
+    logger.error("Failed to retrieve registration session", {
+      registrationToken: registrationToken?.substring(0, 8) + "...",
+      error: error.message,
+    });
+    return sendError(res, error.message, error.statusCode || 400);
+  }
+
+  const { userData, files } = registrationSession;
+  const { firstName, lastName, email, username, password } = userData;
+  const userFullName = `${firstName} ${lastName}`;
+
+  let isVerified;
+  try {
+    isVerified = await verifyOTP(email, otp);
+    logger.info("OTP verification successful", {
+      email,
+      registrationToken: registrationToken.substring(0, 8) + "...",
+    });
+  } catch (error) {
+    logger.error("OTP verification failed", {
+      email,
+      registrationToken: registrationToken.substring(0, 8) + "...",
+      error: error.message,
+    });
+    return sendError(res, error.message, error.statusCode || 400);
+  }
+
+  let user;
+  try {
+    user = new User({
+      fullName: userFullName,
+      email,
+      username,
+      password,
+      isVerified,
+    });
+
+    await user.save(); // NOTE: Trigger pre-save hash password hook if not already hashed
+    logger.info("User created successfully", {
+      userId: user._id,
+      email,
+      username,
+    });
+  } catch (error) {
+    logger.error("Failed to create user", {
+      email,
+      username,
+      error: error.message,
+    });
+    // Clean up session on user creation failure
+    await deleteRegistrationSession(registrationToken);
+    return sendError(
+      res,
+      "Failed to create user account. Please try registration again.",
+      500,
+    );
+  }
+
+  if (files) {
     try {
-      await sendUserMediaToMediaService(user._id.toString(), req.files, req);
+      // Reconstruct files from session data
+      const reconstructedFiles = reconstructFiles(files);
+      if (reconstructedFiles) {
+        await sendUserMediaToMediaService(
+          user._id.toString(),
+          reconstructedFiles,
+          req,
+        );
+        logger.info("Media files uploaded successfully", { userId: user._id });
+      }
     } catch (mediaError) {
       logger.error("Failed to upload media during registration:", {
+        userId: user._id,
         error: mediaError,
       });
-      return sendError(res, mediaError.message, mediaError.status || 500, {
-        mediaError,
-      });
+      // Clean up user and session on media upload failure
+      await User.findByIdAndDelete(user._id);
+      await deleteRegistrationSession(registrationToken);
+      return sendError(
+        res,
+        "Failed to upload media files. Please try registration again.",
+        500,
+      );
     }
   }
 
-  await publishRabbitMQEvent("user.created", {
-    userId: user._id.toString(),
-    searchTerm: user.username,
-    userCreatedAt: user.createdAt,
-  });
+  try {
+    // Publish user creation event
+    await publishRabbitMQEvent("user.created", {
+      userId: user._id.toString(),
+      searchTerm: user.username,
+      userCreatedAt: user.createdAt,
+    });
 
-  // Send welcome email
-  await sendWelcomeEmail(user.fullName, user.email);
+    // Send welcome email
+    await sendWelcomeEmail(user.fullName, user.email);
 
-  // Clear any potential stale cache for this new user
-  await clearRedisUserCache(req, user._id);
+    // Clear any potential stale cache for this new user
+    await clearRedisUserCache(req, user._id);
 
-  return sendSuccess(res, user, "User Registered Successfully", 201);
+    logger.info("Post-registration tasks completed", { userId: user._id });
+  } catch (error) {
+    // Log error but don't fail the registration
+    logger.error("Post-registration tasks failed", {
+      userId: user._id,
+      error: error.message,
+    });
+  }
+
+  try {
+    await deleteRegistrationSession(registrationToken);
+    logger.info("Registration session cleaned up", {
+      registrationToken: registrationToken.substring(0, 8) + "...",
+    });
+  } catch (error) {
+    logger.error("Failed to clean up registration session", {
+      registrationToken: registrationToken.substring(0, 8) + "...",
+      error: error.message,
+    });
+  }
+
+  return sendSuccess(
+    res,
+    {
+      user: {
+        _id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        username: user.username,
+        isVerified: user.isVerified,
+        createdAt: user.createdAt,
+      },
+      message: "Registration completed successfully! Welcome aboard!",
+    },
+    "User Registered Successfully",
+    201,
+  );
 });
 //#endregion
 

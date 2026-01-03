@@ -19,6 +19,9 @@ export const SAFE_PASSWORD_REGEX =
 // Safe ID pattern - alphanumeric and specific characters
 export const SAFE_ID_REGEX = /^[a-zA-Z0-9_-]+$/;
 
+// Safe OTP pattern - only numbers
+export const SAFE_OTP_REGEX = /^\d{4}$/;
+
 // Custom validator function for express-validator
 export const safeRegexValidator = (regex, message) => {
   return (value) => {
@@ -60,3 +63,7 @@ export const validateSearchQuery = safeRegexValidator(
   "Content contains invalid characters. HTML tags and brackets are not allowed",
 );
 
+export const validateOTP = safeRegexValidator(
+  SAFE_OTP_REGEX,
+  "OTP contains invalid characters",
+);

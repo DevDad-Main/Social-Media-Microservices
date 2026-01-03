@@ -147,6 +147,7 @@ const generateOTPEmailHTML = (name, otp) => {
     </html>
   `;
 };
+//#endregion
 
 //#region Generate Welcome Email HTML
 const generateWelcomeEmailHTML = (name) => {
@@ -156,7 +157,7 @@ const generateWelcomeEmailHTML = (name) => {
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Welcome to Our Platform!</title>
+      <title>Welcome to Knect!</title>
       <style>
         body {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
@@ -296,7 +297,7 @@ const generateWelcomeEmailHTML = (name) => {
       <div class="container">
         <div class="header">
           <span class="emoji">🎉</span>
-          <h1>Welcome to the Community!</h1>
+          <h1>Welcome to the Knect Community!</h1>
         </div>
         <div class="content">
           <p class="greeting">Hi ${name},</p>
@@ -336,7 +337,7 @@ const generateWelcomeEmailHTML = (name) => {
         
         <div class="footer">
           <p>Thank you for joining us!</p>
-          <p>The Team</p>
+          <p>The Team @ Knect</p>
           <div class="social-links">
             <a href="#">📧</a>
             <a href="#">🐦</a>
@@ -357,7 +358,7 @@ export const sendWelcomeEmail = async (name, email) => {
   try {
     const htmlContent = generateWelcomeEmailHTML(name);
 
-    await sendMail(email, "Welcome to Our Platform! 🎉", htmlContent);
+    await sendMail(email, "Welcome to Knect! 🎉", htmlContent);
 
     logger.info("Welcome email sent successfully", { email });
   } catch (error) {
@@ -446,44 +447,45 @@ export const sendOTP = async (name, email) => {
 //#endregion
 
 //#region Verify OTP
-export const verifyOTP = async (email, otp, next) => {
-  let succeeded = false;
-  const storedOTP = await redisClient.get(`otp:${email}`);
-  console.log("DEBUG: storedOTP = ", storedOTP);
+export const verifyOTP = async (email, otp) => {
+  try {
+    const storedOTP = await redisClient.get(`otp:${email}`);
+    console.log("DEBUG: storedOTP = ", storedOTP);
 
-  if (!storedOTP) {
-    return next(new AppError("Invalid or expired OTP", 400));
-  }
+    if (!storedOTP) {
+      throw new AppError("Invalid or expired OTP", 400);
+    }
 
-  const failedAttemptsKey = await redisClient.get(`otp_request_count:${email}`);
-  const failedAttempts = parseInt(
-    (await redisClient.get(failedAttemptsKey)) || "0",
-  );
+    const failedAttemptsKey = `otp_request_count:${email}`;
+    const failedAttempts = parseInt(
+      (await redisClient.get(failedAttemptsKey)) || "0",
+    );
 
-  console.log("DEBUG: storedOTP & otp = ", storedOTP, otp);
+    console.log("DEBUG: storedOTP & otp = ", storedOTP, otp);
 
-  if (parseInt(storedOTP) !== parseInt(otp)) {
-    if (failedAttempts >= 2) {
-      await redisClient.set(`otp_locked:${email}`, "locked", "EX", 1800);
-      await redisClient.unlink(`otp:${email}`, failedAttemptsKey);
-      succeeded = false;
-      return next(
-        new AppError(
+    if (parseInt(storedOTP) !== parseInt(otp)) {
+      if (failedAttempts >= 2) {
+        await redisClient.set(`otp_locked:${email}`, "locked", "EX", 1800);
+        await redisClient.unlink(`otp:${email}`, failedAttemptsKey);
+        throw new AppError(
           "Too many failed attempts, Your account has been locked for 30 minutes.",
           400,
-        ),
-      );
-    }
-    await redisClient.set(failedAttemptsKey, failedAttempts + 1, "EX", 300);
-    return next(
-      new AppError(
+        );
+      }
+
+      await redisClient.set(failedAttemptsKey, failedAttempts + 1, "EX", 300);
+      throw new AppError(
         `Incorrect OTP - ${2 - failedAttempts} attempt(s) left`,
         400,
-      ),
-    );
+      );
+    }
+
+    // Success - clean up and return true
+    await redisClient.unlink(`otp:${email}`, failedAttemptsKey);
+    return true;
+  } catch (error) {
+    logger.error("Failed to verify OTP", { error });
+    throw error;
   }
-  succeeded = true;
-  await redisClient.unlink(`otp:${email}`, failedAttemptsKey);
-  return succeeded;
 };
 //#endregion

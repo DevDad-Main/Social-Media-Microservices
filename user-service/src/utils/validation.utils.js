@@ -6,6 +6,7 @@ import {
   validateName,
   validatePassword,
   validateSearchQuery,
+  validateOTP,
 } from "./safeRegex.utils.js";
 
 //#region Register User Validation
@@ -70,72 +71,27 @@ export const registerUserValidation = [
 ];
 //#endregion
 
-//#region Verify User OTP Validation
+//#region Verify Registration OTP Validation
 export const verifyUserRegisterValidation = [
-  body("firstName")
+  // Validate registration token
+  body("registrationToken")
     .notEmpty()
-    .withMessage("First name is required.")
-    .trim()
-    .custom(validateName),
-
-  body("lastName")
-    .notEmpty()
-    .withMessage("Last name is required.")
-    .trim()
-    .custom(validateName),
-
-  body("username")
-    .notEmpty()
-    .withMessage("Username is required")
-    .trim()
+    .withMessage("Registration token is required.")
     .bail()
-    .isLength({ min: 5, max: 12 })
-    .withMessage("Username must be between 5 and 12 characters.")
-    .custom(validateUsername)
-    .custom(async (value) => {
-      const user = await User.findOne({ username: value });
-      if (user) {
-        throw new AppError(
-          "Username already exists, Please choose another.",
-          400,
-        );
-      }
-    }),
-  body("email")
-    .notEmpty()
-    .withMessage("Email is required.")
-    .bail()
-    .isEmail()
-    .withMessage("Please enter a valid email address.")
-    .custom(async (value) => {
-      const user = await User.findOne({ email: value });
-      if (user) {
-        throw new Error("Email address already in use, Please choose another.");
-      }
-    })
-    .normalizeEmail(),
-  body("password")
-    .notEmpty()
-    .withMessage("Password is required.")
-    .custom(validatePassword)
-    .isStrongPassword({
-      minLength: 6,
-      maxLength: 12,
-      minUppercase: 1,
-      minNumbers: 3,
-      minSymbols: 1,
-    })
-    .withMessage(
-      "Password must be 6–12 characters and include at least 1 uppercase, 3 numbers, and 1 symbol.",
-    )
-    .trim(),
+    .isString()
+    .withMessage("Registration token must be a string.")
+    .isLength({ min: 64 })
+    .withMessage("Invalid registration token format."),
 
+  // Validate OTP
   body("otp")
     .notEmpty()
     .withMessage("OTP is required.")
-    .trim()
-    .isInt()
-    .withMessage("OTP must be a valid integer."),
+    .bail()
+    .isString()
+    .withMessage("OTP must be a string.")
+    .custom(validateOTP)
+    .withMessage("OTP must be a 4-digit number."),
 ];
 //#endregion
 
