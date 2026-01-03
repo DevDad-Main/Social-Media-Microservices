@@ -36,6 +36,9 @@ const expressEndpointRateLimiter = rateLimit({
 const allowedOrigins = process.env.ALLOWED_ORIGINS.split(",");
 //#endregion
 
+//NOTE: Trust private/internal proxies (10.x.x.x)
+app.set("trust proxy", (ip) => ip.startsWith("10."));
+
 //#region Middleware
 app.use(helmet());
 //#region CORS Configuration
