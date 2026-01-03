@@ -13,6 +13,7 @@ import bcrypt from "bcrypt";
  * @property {mongoose.Types.ObjectId[]} [following] - Array of user IDs this user follows
  * @property {mongoose.Types.ObjectId[]} [connections] - Array of user IDs this user is connected to
  * @property {string} [refreshToken] - Current refresh token for the user
+ * @property {boolean} [isVerified] - Users email has been verified via OTP
  * @property {Date} createdAt - When the user was created
  * @property {Date} updatedAt - When the user was last updated
  */
@@ -63,6 +64,10 @@ const userSchema = new mongoose.Schema(
     ],
     refreshToken: {
       type: String,
+    },
+    isVerified: {
+      type: Boolean,
+      default: false,
     },
   },
   {
@@ -115,6 +120,7 @@ userSchema.index({
  * @property {mongoose.Types.ObjectId[]} [following] - Array of user IDs this user follows
  * @property {mongoose.Types.ObjectId[]} [connections] - Array of user IDs this user is connected to
  * @property {string} [refreshToken] - Current refresh token for the user
+ * @property {boolean} [isVerified] - Users email has been verified via OTP
  * @property {Date} createdAt - When the user was created
  * @property {Date} updatedAt - When the user was last updated
  */

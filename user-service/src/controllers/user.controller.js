@@ -25,6 +25,7 @@ import {
   checkOTPRestrictions,
   sendOTP,
   trackOTPRequests,
+  verifyOTP,
 } from "../utils/userAuthentication.utils.js";
 
 const MAX_CONNECTION_REQUESTS = 2;
@@ -48,9 +49,6 @@ export const registerUser = catchAsync(async (req, res, next) => {
     return sendError(res, errorMessages.join(", "), 400);
   }
 
-  console.log("DEBUG: req.body = ", req.body);
-  console.log("DEBUG REGISTER ROUTE: req.files = ", req.files);
-
   const existingUser = await User.findOne({ $or: [{ username }, { email }] });
 
   if (existingUser) {
@@ -64,11 +62,42 @@ export const registerUser = catchAsync(async (req, res, next) => {
   await trackOTPRequests(email, next);
   await sendOTP(userFullName, email);
 
+  return sendSuccess(res, {}, "User Registered Stage 1 Completed", 201);
+});
+//#endregion
+
+//#region Verify Users OTP
+export const verifyUserOTP = catchAsync(async (req, res, next) => {
+  const { firstName, lastName, email, username, password, otp } = req.body;
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    const errorMessages = errors.array().map((error) => error.msg);
+    logger.warn("Registration Validation Error: ", { errorMessages });
+    return sendError(res, errorMessages.join(", "), 400);
+  }
+
+  console.log("DEBUG: req.body = ", req.body);
+  console.log("DEBUG REGISTER ROUTE: req.files = ", req.files);
+
+  const existingUser = await User.findOne({ $or: [{ username }, { email }] });
+
+  if (existingUser) {
+    logger.warn("User Already Exists");
+    return sendError(res, "User Already Exists", 400);
+  }
+
+  const userFullName = `${firstName} ${lastName}`;
+
+  // TODO: add verify OTP logic here
+  const isVerified = await verifyOTP(email, otp, next);
+
   const user = new User({
     fullName: userFullName,
     email,
     username,
     password,
+    isVerified,
   });
 
   await user.save(); // NOTE: Trigger pre-save hash password hook

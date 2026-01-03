@@ -6,10 +6,12 @@ import {
   logoutUser,
   fetchUserById,
   fetchUserProfiles,
+  verifyUserOTP,
 } from "../controllers/user.controller.js";
 import {
   loginUserValidation,
   registerUserValidation,
+  verifyUserRegisterValidation,
 } from "../utils/validation.utils.js";
 import { upload } from "../utils/multer.utils.js";
 
@@ -28,6 +30,12 @@ userRouter.post(
   ]),
   registerUserValidation,
   registerUser,
+);
+
+userRouter.post(
+  "/verify-registration",
+  verifyUserRegisterValidation,
+  verifyUserOTP,
 );
 userRouter.post("/login", loginUserValidation, loginUser);
 userRouter.post("/logout", logoutUser);
