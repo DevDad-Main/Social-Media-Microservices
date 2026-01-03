@@ -31,6 +31,8 @@ const expressEndpointRateLimiter = rateLimit({
     sendCommand: (...args) => redisClient.call(...args),
   }),
 });
+
+const allowedOrigins = process.env.ALLOWED_ORIGINS.split(",");
 //#endregion
 
 //#region Middleware
@@ -40,7 +42,7 @@ app.use(helmet());
 app.use(
   cors({
     // origin: allowedOrigins,
-    origin: ["http://localhost:5173"],
+    origin: allowedOrigins,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"],
     allowedHeaders: [
