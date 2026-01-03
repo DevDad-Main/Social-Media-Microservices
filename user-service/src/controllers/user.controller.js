@@ -21,6 +21,11 @@ import { Connection } from "../models/Connection.model.js";
 import { sendUserMediaToMediaService } from "../utils/sendUserMediaToMediaService.utils.js";
 import { getUsersSearchAggregation } from "../utils/getUsersSearchAggregation.utils.js";
 import { getUserConnectionsAggregation } from "../utils/getUserConnectionsAggregation.utils.js";
+import {
+  checkOTPRestrictions,
+  sendOTP,
+  trackOTPRequests,
+} from "../utils/userAuthentication.utils.js";
 
 const MAX_CONNECTION_REQUESTS = 2;
 
@@ -53,8 +58,14 @@ export const registerUser = catchAsync(async (req, res, next) => {
     return sendError(res, "User Already Exists", 400);
   }
 
+  const userFullName = `${firstName} ${lastName}`;
+
+  await checkOTPRestrictions(email, next);
+  await trackOTPRequests(email, next);
+  await sendOTP(userFullName, email);
+
   const user = new User({
-    fullName: `${firstName} ${lastName}`,
+    fullName: userFullName,
     email,
     username,
     password,

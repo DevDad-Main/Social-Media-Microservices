@@ -3,6 +3,7 @@ import { redisClient } from "../lib/redis.lib.js";
 import { sendMail } from "./sendMail.utils.js";
 import { AppError, logger } from "devdad-express-utils";
 
+//#region Generate OTP Email HTML
 const generateOTPEmailHTML = (name, otp) => {
   return `
     <!DOCTYPE html>
@@ -146,24 +147,70 @@ const generateOTPEmailHTML = (name, otp) => {
     </html>
   `;
 };
+//#endregion
 
-const checkOTPRestrictions = async (email, next) => {
+//#region Helper Functions
+const isEmailLocked = async (email) =>
+  await redisClient.get(`otp_locked:${email}`);
+const isSpamLocked = async (email) =>
+  await redisClient.get(`otp_spam_locked:${email}`);
+const isOnCooldown = async (email) =>
+  await redisClient.get(`otp_cooldown:${email}`);
+//#endregion
+
+//#region Check OTP Restrictions
+export const checkOTPRestrictions = async (email, next) => {
   logger.info("Checking OTP restrictions for email", { email });
   //NOTE: Potentially lock the email if it fails too many times due to user error
-  const isEmailLocked = await redisClient.get(`otp_locked:${email}`);
 
-  if (isEmailLocked) {
+  if (await isEmailLocked(email)) {
     return next(
       new AppError(
-        "Email is locked due to multiple failed attempts. Please Try Again After 30 Minutes",
+        "Account is locked due to multiple failed attempts. Please Try Again After 30 Minutes.",
+        400,
+      ),
+    );
+  }
+  if (await isSpamLocked(email)) {
+    return next(
+      new AppError(
+        "Too many failed attempts. Please try again after 30 minutes.",
+        400,
+      ),
+    );
+  }
+  if (await isOnCooldown(email)) {
+    return next(
+      new AppError(
+        "Please wait 1 minute before requesting a new OTP code.",
         400,
       ),
     );
   }
 };
+//#endregion
 
-//NOTE: Test comment as this should work, async
-export const sendOTP = async (name, email, template) => {
+//#region Track OTP Requests
+export const trackOTPRequests = async (email, next) => {
+  const otpRequestKey = `otp_request_count:${email}`;
+  let optRequests = parseInt((await redisClient.get(otpRequestKey)) || "0");
+
+  if (optRequests >= 2) {
+    await redisClient.set(`otp_spam_locked:${email}`, "locked", "EX", 3600);
+    return next(
+      new AppError(
+        "Too many failed attempts. Please try again after 1 hour.",
+        400,
+      ),
+    );
+  }
+
+  await redisClient.set(otpRequestKey, optRequests + 1, "EX", 3600);
+};
+//#endregion
+
+//#region Send OTP
+export const sendOTP = async (name, email) => {
   const otp = crypto.randomInt(1000, 9999).toString();
   logger.info("Sending OTP for email", { email, otp });
 
@@ -175,3 +222,4 @@ export const sendOTP = async (name, email, template) => {
   //NOTE: Set cooldown for 1 min between each request
   await redisClient.set(`otp_cooldown:${email}`, "true", "EX", 60);
 };
+//#endregion

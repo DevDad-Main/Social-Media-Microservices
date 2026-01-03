@@ -1,4 +1,5 @@
 import Redis from "ioredis";
+import { logger } from "devdad-express-utils";
 
 export const redisClient = new Redis(process.env.REDIS_URL, {
   maxRetriesPerRequest: null, // retry commands indefinitely
