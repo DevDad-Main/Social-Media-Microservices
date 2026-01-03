@@ -11,7 +11,6 @@ import { validateUserToken } from "./middleware/auth.middleware.js";
 
 //#region Constants
 const app = express();
-
 const redisClient = new Redis(process.env.REDIS_URL, {
   maxRetriesPerRequest: null, // retry commands indefinitely
   retryStrategy(times) {
@@ -25,6 +24,8 @@ redisClient.on("connect", (info) =>
   logger.info("✅ Redis connected", { info }),
 );
 redisClient.on("error", (err) => logger.error("❌ Redis error:", { err }));
+
+const allowedOrigins = process.env.ALLOWED_ORIGINS.split(",");
 
 // const expressEndpointRateLimiter = rateLimit({
 //   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -63,8 +64,7 @@ app.use(helmet());
 //#region CORS Configuration
 app.use(
   cors({
-    // origin: allowedOrigins,
-    origin: ["http://localhost:5173"],
+    origin: allowedOrigins,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"],
     allowedHeaders: [
