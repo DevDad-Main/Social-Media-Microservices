@@ -24,6 +24,7 @@ import { getUserConnectionsAggregation } from "../utils/getUserConnectionsAggreg
 import {
   checkOTPRestrictions,
   sendOTP,
+  sendWelcomeEmail,
   trackOTPRequests,
   verifyOTP,
 } from "../utils/userAuthentication.utils.js";
@@ -120,6 +121,9 @@ export const verifyUserOTP = catchAsync(async (req, res, next) => {
     searchTerm: user.username,
     userCreatedAt: user.createdAt,
   });
+
+  // Send welcome email
+  await sendWelcomeEmail(user.fullName, user.email);
 
   // Clear any potential stale cache for this new user
   await clearRedisUserCache(req, user._id);

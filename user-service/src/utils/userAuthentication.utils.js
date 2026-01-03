@@ -350,17 +350,14 @@ const generateWelcomeEmailHTML = (name) => {
     </html>
   `;
 };
+//#endregion
 
 //#region Send Welcome Email
 export const sendWelcomeEmail = async (name, email) => {
   try {
     const htmlContent = generateWelcomeEmailHTML(name);
 
-    await sendMail({
-      to: email,
-      subject: "Welcome to Our Platform! 🎉",
-      html: htmlContent,
-    });
+    await sendMail(email, "Welcome to Our Platform! 🎉", htmlContent);
 
     logger.info("Welcome email sent successfully", { email });
   } catch (error) {
