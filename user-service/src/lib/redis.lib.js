@@ -2,7 +2,7 @@ import Redis from "ioredis";
 import { logger } from "devdad-express-utils";
 
 const redisClient = new Redis(process.env.REDIS_URL, {
-  family: 4,                // 👈 force IPv4 (fixes ETIMEDOUT)
+  family: 4, // 👈 force IPv4 (fixes ETIMEDOUT)
   maxRetriesPerRequest: null,
   enableReadyCheck: true,
   retryStrategy(times) {

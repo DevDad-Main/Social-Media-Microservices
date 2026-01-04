@@ -1,9 +1,9 @@
-import { redisClient } from "../lib/redis.lib.js";
+import redisClient from "../lib/redis.lib.js";
 import { logger } from "devdad-express-utils";
 
 /**
  * @fileoverview Registration Cleanup Utilities
- * 
+ *
  * This module provides utilities for cleaning up expired registration sessions
  * and maintaining system hygiene. It includes automatic cleanup of expired
  * sessions and manual cleanup utilities.
@@ -23,15 +23,17 @@ export const cleanupExpiredRegistrationSessions = async () => {
   const results = {
     deleted: 0,
     errors: [],
-    startTime: new Date().toISOString()
+    startTime: new Date().toISOString(),
   };
 
   try {
     logger.info("Starting expired registration session cleanup");
 
     // Get all registration session keys
-    const sessionKeys = await redisClient.keys(`${REGISTRATION_SESSION_PREFIX}*`);
-    
+    const sessionKeys = await redisClient.keys(
+      `${REGISTRATION_SESSION_PREFIX}*`,
+    );
+
     if (sessionKeys.length === 0) {
       logger.info("No registration sessions found for cleanup");
       return results;
@@ -42,11 +44,11 @@ export const cleanupExpiredRegistrationSessions = async () => {
     // Process in batches to avoid blocking Redis
     for (let i = 0; i < sessionKeys.length; i += CLEANUP_BATCH_SIZE) {
       const batch = sessionKeys.slice(i, i + CLEANUP_BATCH_SIZE);
-      
+
       for (const key of batch) {
         try {
           const sessionData = await redisClient.get(key);
-          
+
           if (!sessionData) {
             // Key doesn't exist anymore, count as cleaned
             results.deleted++;
@@ -55,14 +57,16 @@ export const cleanupExpiredRegistrationSessions = async () => {
 
           const parsedData = JSON.parse(sessionData);
           const expiresAt = new Date(parsedData.expiresAt);
-          
+
           if (expiresAt < new Date()) {
             // Session has expired, delete it
             await redisClient.del(key);
             results.deleted++;
-            logger.debug("Deleted expired registration session", { 
-              key: key.replace(REGISTRATION_SESSION_PREFIX, '').substring(0, 8) + "...",
-              expiredAt: parsedData.expiresAt
+            logger.debug("Deleted expired registration session", {
+              key:
+                key.replace(REGISTRATION_SESSION_PREFIX, "").substring(0, 8) +
+                "...",
+              expiredAt: parsedData.expiresAt,
             });
           }
         } catch (error) {
@@ -74,7 +78,7 @@ export const cleanupExpiredRegistrationSessions = async () => {
 
       // Small delay between batches to avoid overwhelming Redis
       if (i + CLEANUP_BATCH_SIZE < sessionKeys.length) {
-        await new Promise(resolve => setTimeout(resolve, 10));
+        await new Promise((resolve) => setTimeout(resolve, 10));
       }
     }
 
@@ -83,13 +87,14 @@ export const cleanupExpiredRegistrationSessions = async () => {
       totalChecked: sessionKeys.length,
       deleted: results.deleted,
       errors: results.errors.length,
-      duration: `${duration}ms`
+      duration: `${duration}ms`,
     });
-
   } catch (error) {
     const errorMsg = `Cleanup failed: ${error.message}`;
     results.errors.push(errorMsg);
-    logger.error("Registration session cleanup failed", { error: error.message });
+    logger.error("Registration session cleanup failed", {
+      error: error.message,
+    });
   }
 
   return results;
@@ -106,11 +111,13 @@ export const getRegistrationSessionStats = async () => {
     activeSessions: 0,
     expiringSoon: 0, // Sessions expiring in next 5 minutes
     oldestSession: null,
-    newestSession: null
+    newestSession: null,
   };
 
   try {
-    const sessionKeys = await redisClient.keys(`${REGISTRATION_SESSION_PREFIX}*`);
+    const sessionKeys = await redisClient.keys(
+      `${REGISTRATION_SESSION_PREFIX}*`,
+    );
     stats.totalSessions = sessionKeys.length;
 
     if (sessionKeys.length === 0) {
@@ -135,7 +142,7 @@ export const getRegistrationSessionStats = async () => {
           stats.expiredSessions++;
         } else {
           stats.activeSessions++;
-          
+
           if (expiresAt <= fiveMinutesFromNow) {
             stats.expiringSoon++;
           }
@@ -144,29 +151,37 @@ export const getRegistrationSessionStats = async () => {
         if (createdAt < oldestTime) {
           oldestTime = createdAt;
           stats.oldestSession = {
-            key: key.replace(REGISTRATION_SESSION_PREFIX, '').substring(0, 8) + "...",
+            key:
+              key.replace(REGISTRATION_SESSION_PREFIX, "").substring(0, 8) +
+              "...",
             createdAt: createdAt.toISOString(),
-            email: parsedData.userData?.email || 'unknown'
+            email: parsedData.userData?.email || "unknown",
           };
         }
 
         if (createdAt > newestTime) {
           newestTime = createdAt;
           stats.newestSession = {
-            key: key.replace(REGISTRATION_SESSION_PREFIX, '').substring(0, 8) + "...",
+            key:
+              key.replace(REGISTRATION_SESSION_PREFIX, "").substring(0, 8) +
+              "...",
             createdAt: createdAt.toISOString(),
-            email: parsedData.userData?.email || 'unknown'
+            email: parsedData.userData?.email || "unknown",
           };
         }
       } catch (error) {
-        logger.error("Failed to process session for stats", { key, error: error.message });
+        logger.error("Failed to process session for stats", {
+          key,
+          error: error.message,
+        });
       }
     }
 
     logger.info("Registration session statistics", stats);
-
   } catch (error) {
-    logger.error("Failed to get registration session stats", { error: error.message });
+    logger.error("Failed to get registration session stats", {
+      error: error.message,
+    });
   }
 
   return stats;
@@ -182,8 +197,10 @@ export const cleanupUserRegistrationSessions = async (email) => {
   let deletedCount = 0;
 
   try {
-    const sessionKeys = await redisClient.keys(`${REGISTRATION_SESSION_PREFIX}*`);
-    
+    const sessionKeys = await redisClient.keys(
+      `${REGISTRATION_SESSION_PREFIX}*`,
+    );
+
     for (const key of sessionKeys) {
       try {
         const sessionData = await redisClient.get(key);
@@ -193,22 +210,33 @@ export const cleanupUserRegistrationSessions = async (email) => {
         if (parsedData.userData?.email === email) {
           await redisClient.del(key);
           deletedCount++;
-          logger.info("Cleaned up user registration session", { 
-            email, 
-            key: key.replace(REGISTRATION_SESSION_PREFIX, '').substring(0, 8) + "..." 
+          logger.info("Cleaned up user registration session", {
+            email,
+            key:
+              key.replace(REGISTRATION_SESSION_PREFIX, "").substring(0, 8) +
+              "...",
           });
         }
       } catch (error) {
-        logger.error("Failed to cleanup user session", { key, email, error: error.message });
+        logger.error("Failed to cleanup user session", {
+          key,
+          email,
+          error: error.message,
+        });
       }
     }
 
     if (deletedCount > 0) {
-      logger.info("User registration session cleanup completed", { email, deletedCount });
+      logger.info("User registration session cleanup completed", {
+        email,
+        deletedCount,
+      });
     }
-
   } catch (error) {
-    logger.error("Failed to cleanup user registration sessions", { email, error: error.message });
+    logger.error("Failed to cleanup user registration sessions", {
+      email,
+      error: error.message,
+    });
   }
 
   return deletedCount;
@@ -222,13 +250,13 @@ export const cleanupUserRegistrationSessions = async (email) => {
  */
 export const setupAutomaticCleanup = (intervalMinutes = 30) => {
   const intervalMs = intervalMinutes * 60 * 1000;
-  
-  logger.info("Setting up automatic registration session cleanup", { 
-    interval: `${intervalMinutes} minutes` 
+
+  logger.info("Setting up automatic registration session cleanup", {
+    interval: `${intervalMinutes} minutes`,
   });
 
   // Run initial cleanup
-  cleanupExpiredRegistrationSessions().catch(error => {
+  cleanupExpiredRegistrationSessions().catch((error) => {
     logger.error("Initial cleanup failed", { error: error.message });
   });
 
@@ -236,12 +264,12 @@ export const setupAutomaticCleanup = (intervalMinutes = 30) => {
   const cleanupInterval = setInterval(async () => {
     try {
       const results = await cleanupExpiredRegistrationSessions();
-      
+
       // Log if there were issues
       if (results.errors.length > 0) {
-        logger.warn("Cleanup completed with errors", { 
+        logger.warn("Cleanup completed with errors", {
           errors: results.errors.length,
-          deleted: results.deleted
+          deleted: results.deleted,
         });
       }
     } catch (error) {
@@ -251,3 +279,4 @@ export const setupAutomaticCleanup = (intervalMinutes = 30) => {
 
   return cleanupInterval;
 };
+
