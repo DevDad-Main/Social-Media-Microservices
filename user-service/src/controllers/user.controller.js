@@ -73,31 +73,21 @@ export const createUserAccountWithGoogle = catchAsync(async (req, res) => {
   const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
   // Find or create user
-  const existingUser = await User.findOne({ email });
+  let user = await User.findOne({ email });
 
-  if (existingUser) {
-    logger.warn(
-      "A User already exists with that email. Please choose another",
-      { email },
-    );
-    return sendError(
-      res,
-      "A User already exists with that email. Please choose another",
-      400,
-    );
+  if (!user) {
+    user = await User.create({
+      username: email.split("@")[0],
+      fullName: name,
+      email,
+      password: hashedPassword,
+      authProvider: "google",
+      isVerified: true,
+    });
+
+    // Send welcome email
+    await sendWelcomeEmail(user.fullName, user.email);
   }
-
-  const user = await User.create({
-    username: email.split("@")[0],
-    fullName: name,
-    email,
-    password: hashedPassword,
-    authProvider: "google",
-    isVerified: true,
-  });
-
-  // Send welcome email
-  await sendWelcomeEmail(user.fullName, user.email);
 
   // Clear any potential stale cache for this new user
   await clearRedisUserCache(req, user._id);

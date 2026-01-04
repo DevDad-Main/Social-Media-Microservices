@@ -124,8 +124,8 @@ export const updateUserValidation = [
     .withMessage("Username is required")
     .trim()
     .bail()
-    .isLength({ min: 5, max: 12 })
-    .withMessage("Username must be between 5 and 12 characters.")
+    .isLength({ min: 5, max: 15 })
+    .withMessage("Username must be between 5 and 15 characters.")
     .custom(validateUsername)
     .custom(async (value, { req }) => {
       const loggedInUser = await User.findById(req.user?._id);
