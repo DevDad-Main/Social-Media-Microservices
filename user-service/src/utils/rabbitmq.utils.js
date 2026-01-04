@@ -50,3 +50,22 @@ export async function publishEvent(routingKey, message) {
   );
   logger.info(`Published event to ${routingKey}`);
 }
+
+export async function consumeEvent(routingKey, callback) {
+  if (!channel) {
+    await initializeRabbitMQ();
+  }
+
+  const queue = await channel.assertQueue("", { exclusive: true });
+  await channel.bindQueue(queue.queue, EXCHANGE_NAME, routingKey);
+  channel.consume(queue.queue, (msg) => {
+    if (!msg || msg === null) {
+      return new AppError("Message is null");
+    }
+    const content = JSON.parse(msg.content.toString());
+    callback(content);
+    channel.ack(msg);
+
+    logger.info(`Consumed event from ${routingKey}:${content}`);
+  });
+}

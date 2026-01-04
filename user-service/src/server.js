@@ -1,14 +1,18 @@
 import "dotenv/config";
 import { connectDB, getDBStatus, logger } from "devdad-express-utils";
 import { app } from "./app.js";
-import { initializeRabbitMQ } from "./utils/rabbitmq.utils.js";
+import { initializeRabbitMQ, consumeEvent } from "./utils/rabbitmq.utils.js";
 import { setupAutomaticCleanup } from "./utils/registrationCleanup.utils.js";
+import { handlePostCreatedEvent } from "./eventHandlers/userProfile.eventHandler.js";
 
 await connectDB();
 
 (async () => {
   try {
     await initializeRabbitMQ();
+
+    // Setup event consumers
+    await consumeEvent("post.created", handlePostCreatedEvent);
 
     // Setup automatic registration session cleanup (every 30 minutes)
     const cleanupInterval = setupAutomaticCleanup(30);
