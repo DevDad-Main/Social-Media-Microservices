@@ -7,6 +7,7 @@ import {
   fetchUserById,
   fetchUserProfiles,
   verifyUserOTP,
+  createUserAccountWithGoogle,
 } from "../controllers/user.controller.js";
 import {
   loginUserValidation,
@@ -31,6 +32,8 @@ userRouter.post(
   registerUserValidation,
   registerUser,
 );
+
+userRouter.post("/google-login", createUserAccountWithGoogle);
 
 userRouter.post(
   "/verify-registration",

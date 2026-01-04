@@ -353,7 +353,7 @@ export const fetchUserMedia = catchAsync(async (req, res, next) => {
 
   if (!media || media.length === 0) {
     logger.warn("No Media Found");
-    return sendError(res, "No Media Found", 404);
+    return sendSuccess(res, [], "No Media Found", 200);
   }
 
   console.log("DEBUG: media = ", media);

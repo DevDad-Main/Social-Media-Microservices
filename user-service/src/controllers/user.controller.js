@@ -34,15 +34,95 @@ import {
   getRegistrationSession,
   reconstructFiles,
 } from "../utils/registrationSession.utils.js";
-
-const MAX_CONNECTION_REQUESTS = 2;
+import { OAuth2Client } from "google-auth-library";
+import { v7 as uuidv7 } from "uuid";
+import bcrypt from "bcrypt";
 
 //#region Constants
+const SALT_ROUNDS = 12;
+const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const MAX_CONNECTION_REQUESTS = 2;
 const HTTP_OPTIONS = {
   httpOnly: true,
   secure: true,
   sameSite: "none",
 };
+
+const client = new OAuth2Client(CLIENT_ID);
+//#endregion
+
+//#region Create User Via Google
+export const createUserAccountWithGoogle = catchAsync(async (req, res) => {
+  const { credential } = req.body;
+
+  if (!credential) {
+    return sendError(res, "Google credential is required", 400);
+  }
+
+  // Verify Google credentials
+  const ticket = await client.verifyIdToken({
+    idToken: credential,
+    audience: CLIENT_ID,
+  });
+
+  const payload = ticket.getPayload();
+  const { email, name } = payload;
+
+  // Generate a random password for the user
+  const password = uuidv7();
+  const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+
+  // Find or create user
+  const existingUser = await User.findOne({ email });
+
+  if (existingUser) {
+    logger.warn(
+      "A User already exists with that email. Please choose another",
+      { email },
+    );
+    return sendError(
+      res,
+      "A User already exists with that email. Please choose another",
+      400,
+    );
+  }
+
+  const user = await User.create({
+    username: email.split("@")[0],
+    fullName: name,
+    email,
+    password: hashedPassword,
+    authProvider: "google",
+    isVerified: true,
+  });
+
+  // Send welcome email
+  await sendWelcomeEmail(user.fullName, user.email);
+
+  // Clear any potential stale cache for this new user
+  await clearRedisUserCache(req, user._id);
+
+  // Generate JWT token
+  const { accesstoken, refreshToken } = await generateTokens(user);
+
+  return sendSuccess(
+    res,
+    {
+      accesstoken,
+      refreshToken,
+      user: {
+        username: user.username,
+        _id: user._id,
+      },
+    },
+    "Login Successful",
+    200,
+    [
+      (res) => res.cookie("accessToken", accesstoken, HTTP_OPTIONS),
+      (res) => res.cookie("refreshToken", refreshToken, HTTP_OPTIONS),
+    ],
+  );
+});
 //#endregion
 
 //#region Register User - Step 1: Store Data & Send OTP
@@ -223,6 +303,7 @@ export const verifyUserOTP = catchAsync(async (req, res, next) => {
       username,
       password,
       isVerified,
+      authProvider: "local",
     });
 
     await user.save(); // NOTE: Trigger pre-save hash password hook if not already hashed
@@ -642,20 +723,17 @@ export const fetchUserById = catchAsync(async (req, res, next) => {
 
   const userProfilePhoto = await fetchMediaByUserId(userId);
 
-  if (!userProfilePhoto) {
-    logger.warn("User Profile Photo Not Found");
-    return sendError(res, "User Profile Photo Not Found", 404);
-  }
-
   const simplifiedUser = { ...profile.toObject() };
+
+  // Find profile photo from media array (if exists)
+  const profileMedia = Array.isArray(userProfilePhoto)
+    ? userProfilePhoto.find((media) => media.type === "profile")
+    : null;
 
   const enrichedProfile = {
     fullName: simplifiedUser.fullName,
     username: simplifiedUser.username,
-    profilePhoto:
-      userProfilePhoto.data.type === "profile"
-        ? userProfilePhoto.data.url
-        : null,
+    profilePhoto: profileMedia ? profileMedia.url : null,
   };
 
   //NOTE: Cache enriched profile
@@ -1075,15 +1153,11 @@ export const fetchUser = catchAsync(async (req, res, next) => {
 
     const userMedia = await fetchMediaByUserId(userId);
 
-    if (!userMedia || !userMedia.data || userMedia.data.length === 0) {
-      logger.warn("User Media Not Found");
-      return sendError(res, "User Media Not Found", 404);
-    }
+    // Handle empty media array for new users
+    const mediaArray = Array.isArray(userMedia) ? userMedia : [];
 
-    const profileMedia = userMedia.data.find(
-      (media) => media.type === "profile",
-    );
-    const coverMedia = userMedia.data.find((media) => media.type === "cover");
+    const profileMedia = mediaArray.find((media) => media.type === "profile");
+    const coverMedia = mediaArray.find((media) => media.type === "cover");
 
     const enrichedUser = {
       ...user.toObject(),

@@ -19,6 +19,10 @@ export const fetchMediaByUserId = async (userId) => {
     return res.data;
   } catch (error) {
     logger.error("Failed to fetch media by userId:", { error });
+    // Return empty array instead of throwing error for new users without media
+    if (error.response?.status === 404) {
+      return [];
+    }
     throw error;
   }
 };
