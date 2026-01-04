@@ -2,29 +2,16 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { errorHandler, logger, sendError } from "devdad-express-utils";
-import Redis from "ioredis";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import RedisStore from "rate-limit-redis";
 import proxy from "express-http-proxy";
 import { validateUserToken } from "./middleware/auth.middleware.js";
+import redisClient from "./lib/redis.lib.js";
 
 //#region Constants
 const allowedOrigins = process.env.ALLOWED_ORIGINS.split(",");
 const app = express();
-const redisClient = new Redis(process.env.REDIS_URL, {
-  maxRetriesPerRequest: null, // retry commands indefinitely
-  retryStrategy(times) {
-    const delay = Math.min(times * 50, 2000);
-    console.log(`Redis reconnect attempt #${times}, retrying in ${delay}ms`);
-    return delay;
-  },
-});
-
-redisClient.on("connect", (info) =>
-  logger.info("✅ Redis connected", { info }),
-);
-redisClient.on("error", (err) => logger.error("❌ Redis error:", { err }));
 
 const expressEndpointRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes

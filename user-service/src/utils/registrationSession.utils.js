@@ -1,4 +1,4 @@
-import { redisClient } from "../lib/redis.lib.js";
+import redisClient from "../lib/redis.lib.js";
 import { AppError, logger } from "devdad-express-utils";
 import { randomBytes } from "crypto";
 

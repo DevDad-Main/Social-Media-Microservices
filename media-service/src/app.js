@@ -4,14 +4,13 @@ import mediaRouter from "./routes/media.routes.js";
 import helmet from "helmet";
 import { RateLimiterRedis } from "rate-limiter-flexible";
 import rateLimit from "express-rate-limit";
-import Redis from "ioredis";
 import RedisStore from "rate-limit-redis";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import redisClient from "./lib/redis.lib.js";
 
 //#region Constants
 const app = express();
-const redisClient = new Redis(process.env.REDIS_URL);
 const rateLimiter = new RateLimiterRedis({
   storeClient: redisClient,
   keyPrefix: "media-rate-limit-middleware",
