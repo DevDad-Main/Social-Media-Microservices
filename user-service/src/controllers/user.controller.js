@@ -1144,7 +1144,7 @@ export const fetchUser = catchAsync(async (req, res, next) => {
     const userMedia = await fetchMediaByUserId(userId);
 
     // Handle empty media array for new users
-    const mediaArray = Array.isArray(userMedia) ? userMedia : [];
+    const mediaArray = Array.isArray(userMedia.data) ? userMedia.data : [];
 
     const profileMedia = mediaArray.find((media) => media.type === "profile");
     const coverMedia = mediaArray.find((media) => media.type === "cover");
@@ -1153,7 +1153,6 @@ export const fetchUser = catchAsync(async (req, res, next) => {
       ...user.toObject(),
       profile_photo: profileMedia ? profileMedia.url : null,
       cover_photo: coverMedia ? coverMedia.url : null,
-      success: true,
     };
 
     return sendSuccess(
