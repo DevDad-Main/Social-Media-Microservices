@@ -10,6 +10,7 @@ import proxy from "express-http-proxy";
 import { validateUserToken } from "./middleware/auth.middleware.js";
 
 //#region Constants
+const allowedOrigins = process.env.ALLOWED_ORIGINS.split(",");
 const app = express();
 const redisClient = new Redis(process.env.REDIS_URL, {
   maxRetriesPerRequest: null, // retry commands indefinitely
@@ -25,21 +26,19 @@ redisClient.on("connect", (info) =>
 );
 redisClient.on("error", (err) => logger.error("❌ Redis error:", { err }));
 
-const allowedOrigins = process.env.ALLOWED_ORIGINS.split(",");
-
-// const expressEndpointRateLimiter = rateLimit({
-//   windowMs: 15 * 60 * 1000, // 15 minutes
-//   max: 100, // limit each IP to 100 requests per windowMs
-//   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-//   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-//   handler: (req, res, _next) => {
-//     logger.warn(`Public API Rate Limit Exceeded for IP: ${req.ip}`);
-//     return sendError(res, "Rate Limit Exceeded", 429);
-//   },
-//   store: new RedisStore({
-//     sendCommand: (...args) => redisClient.call(...args),
-//   }),
-// });
+const expressEndpointRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 200, // limit each IP to 100 requests per windowMs
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  handler: (req, res, _next) => {
+    logger.warn(`Public API Rate Limit Exceeded for IP: ${req.ip}`);
+    return sendError(res, "Rate Limit Exceeded", 429);
+  },
+  store: new RedisStore({
+    sendCommand: (...args) => redisClient.call(...args),
+  }),
+});
 const proxyOptions = {
   proxyReqPathResolver: (req) => {
     return req.originalUrl.replace(/^\/v1/, "/api");
