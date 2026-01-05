@@ -120,14 +120,14 @@ app.use(
     ...proxyOptions,
     // NOTE: Allows us to overwrite certain Request Options before proxying
     proxyReqOptDecorator: (proxyReqOptions, srcReq) => {
-      proxyReqOptions.headers["content-type"] = "application/json";
-      proxyReqOptions.headers["x-user-id"] = srcReq.user._id;
-      
-      // Forward the original request body if it exists
-      if (srcReq.body && Object.keys(srcReq.body).length > 0) {
-        proxyReqOptions.body = JSON.stringify(srcReq.body);
+      if (
+        !srcReq.headers["content-type"] ||
+        !srcReq.headers["content-type"].startsWith("multipart/form-data")
+      ) {
+        proxyReqOptions.headers["content-type"] = "application/json";
       }
-      
+      proxyReqOptions.headers["x-user-id"] = srcReq.user._id;
+
       return proxyReqOptions;
     },
     userResDecorator: (proxyRes, proxyResData, userReq, userRes) => {
@@ -136,6 +136,7 @@ app.use(
       );
       return proxyResData;
     },
+    limit: "10mb",
   }),
 );
 //#endregion
