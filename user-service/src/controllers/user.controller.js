@@ -37,6 +37,7 @@ import {
 import { OAuth2Client } from "google-auth-library";
 import { v7 as uuidv7 } from "uuid";
 import bcrypt from "bcrypt";
+import { StreamChat } from "stream-chat";
 
 //#region Constants
 const SALT_ROUNDS = 12;
@@ -49,6 +50,12 @@ const HTTP_OPTIONS = {
 };
 
 const client = new OAuth2Client(CLIENT_ID);
+
+// Initialize Stream Chat server client
+const streamChatClient = StreamChat.getInstance(
+  process.env.STREAM_CHAT_API_KEY,
+  process.env.STREAM_CHAT_SECRET_KEY,
+);
 //#endregion
 
 //#region Create User Via Google
@@ -501,18 +508,10 @@ export const generateRefreshToken = catchAsync(async (req, res, next) => {
 
 //#region Logout User
 export const logoutUser = catchAsync(async (req, res, next) => {
-  res
-    .clearCookie("accessToken", HTTP_OPTIONS)
-    .clearCookie("refreshToken", HTTP_OPTIONS);
-
-  return sendSuccess(
-    res,
-    {
-      success: true,
-    },
-    "Logout Successful",
-    200,
-  );
+  return sendSuccess(res, {}, "Logout Successful", 200, [
+    (res) => res.clearCookie("accessToken"),
+    (res) => res.clearCookie("refreshToken"),
+  ]);
 });
 //#endregion
 
@@ -1220,5 +1219,64 @@ export const usersSearch = catchAsync(async (req, res, next) => {
   await req.redisClient.set(cacheKey, JSON.stringify(users), "EX", 180);
 
   return sendSuccess(res, users, "User Searches retrieved successfully", 200);
+});
+//#endregion
+
+//#region Generate Stream Chat Token
+export const generateStreamChatToken = catchAsync(async (req, res, next) => {
+  const { userId, username, name, image } = req.body;
+
+  // if (!userId || !username) {
+  //   return sendError(res, "userId and username are required", 400);
+  // }
+
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    const errorMessages = errors.array().map((error) => error.msg);
+    logger.warn("Stream Chat Token Validation Error: ", {
+      errorMessages,
+    });
+    return sendError(res, errorMessages.join(", "), 400);
+  }
+
+  // Verify user is authenticated
+  const currentUser = req.user;
+
+  if (!currentUser || currentUser._id.toString() !== userId) {
+    logger.warn("Stream Chat token generation: Unauthorized user", {
+      requestedUserId: userId,
+      authenticatedUserId: currentUser?._id,
+    });
+    return sendError(res, "Unauthorized", 401);
+  }
+
+  try {
+    // Generate Stream Chat token
+    const token = streamChatClient.createToken(userId);
+
+    logger.info("Stream Chat token generated successfully", {
+      userId,
+      username,
+      token,
+    });
+
+    return sendSuccess(
+      res,
+      { token },
+      "Stream Chat token generated successfully",
+      200,
+    );
+  } catch (error) {
+    logger.error("Stream Chat token generation failed", {
+      userId,
+      error: error.message,
+    });
+    return sendError(
+      res,
+      error.message || "Failed to generate Stream Chat token",
+      500,
+    );
+  }
 });
 //#endregion

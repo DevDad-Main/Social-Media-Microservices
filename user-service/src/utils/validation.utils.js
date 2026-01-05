@@ -155,3 +155,31 @@ export const usersSearchValidation = [
     .custom(validateSearchQuery),
 ];
 //#endregion
+
+//#region Stream Chat Token Validation
+export const streamChatTokenValidation = [
+  body("userId")
+    .notEmpty()
+    .withMessage("userId is required.")
+    .isMongoId()
+    .withMessage("Invalid userId format."),
+  
+  body("username")
+    .notEmpty()
+    .withMessage("username is required.")
+    .trim()
+    .isLength({ min: 3, max: 30 })
+    .withMessage("username must be between 3 and 30 characters."),
+  
+  body("name")
+    .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage("name must not exceed 100 characters."),
+  
+  body("image")
+    .optional()
+    .isURL()
+    .withMessage("image must be a valid URL."),
+];
+//#endregion

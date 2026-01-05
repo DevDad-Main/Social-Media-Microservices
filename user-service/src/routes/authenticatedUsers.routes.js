@@ -9,11 +9,13 @@ import {
   acceptConnectionRequests,
   fetchUser,
   usersSearch,
+  generateStreamChatToken,
 } from "../controllers/user.controller.js";
 import { authenticateUserMiddleware } from "../middleware/auth.middleware.js";
 import {
   updateUserValidation,
   usersSearchValidation,
+  streamChatTokenValidation,
 } from "../utils/validation.utils.js";
 
 const authenticatedUsersRouter = Router();
@@ -38,5 +40,12 @@ authenticatedUsersRouter.post("/accept", acceptConnectionRequests);
 
 // NOTE: Search Route moved here from search-service
 authenticatedUsersRouter.get("/search", usersSearchValidation, usersSearch);
+
+// Stream Chat token generation
+authenticatedUsersRouter.post(
+  "/stream/chat/token",
+  streamChatTokenValidation,
+  generateStreamChatToken,
+);
 
 export default authenticatedUsersRouter;
