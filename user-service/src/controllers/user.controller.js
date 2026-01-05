@@ -1224,14 +1224,7 @@ export const usersSearch = catchAsync(async (req, res, next) => {
 
 //#region Generate Stream Chat Token
 export const generateStreamChatToken = catchAsync(async (req, res, next) => {
-  // Extract user data from authenticated user instead of request body
-  // The request body gets lost during API gateway proxying in production
-  const currentUser = req.user;
-  
-  const userId = currentUser._id.toString();
-  const username = currentUser.username;
-  const name = currentUser.name || currentUser.username;
-  const image = currentUser.profilePictureUrl || currentUser.image;
+  const { userId, username, name, image } = req.body;
 
   if (!userId || !username) {
     return sendError(res, "userId and username are required", 400);
@@ -1247,7 +1240,16 @@ export const generateStreamChatToken = catchAsync(async (req, res, next) => {
   //   return sendError(res, errorMessages.join(", "), 400);
   // }
 
-  // User is already authenticated by middleware
+  // Verify user is authenticated
+  const currentUser = req.user;
+
+  if (!currentUser || currentUser._id.toString() !== userId) {
+    logger.warn("Stream Chat token generation: Unauthorized user", {
+      requestedUserId: userId,
+      authenticatedUserId: currentUser?._id,
+    });
+    return sendError(res, "Unauthorized", 401);
+  }
 
   try {
     // Generate Stream Chat token
