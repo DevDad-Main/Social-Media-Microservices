@@ -10,7 +10,13 @@ async function connectionToRabbitMQ(retries = 5) {
   for (let i = 0; i < retries; i++) {
     try {
       if (connection) return connection;
-      connection = await amqp.connect(process.env.RABBITMQ_URL);
+      
+      const rabbitmqUrl = process.env.RABBITMQ_URL;
+      if (!rabbitmqUrl) {
+        throw new Error("RABBITMQ_URL environment variable is not set");
+      }
+      
+      connection = await amqp.connect(rabbitmqUrl);
       return connection;
     } catch (error) {
       logger.warn(`RabbitMQ not ready, retrying ${i + 1}/${retries}...`);
@@ -56,16 +62,26 @@ export async function consumeEvent(routingKey, callback) {
     await initializeRabbitMQ();
   }
 
+  if (!channel) {
+    throw new AppError("Failed to initialize RabbitMQ channel for event consumption");
+  }
+
   const queue = await channel.assertQueue("", { exclusive: true });
   await channel.bindQueue(queue.queue, EXCHANGE_NAME, routingKey);
   channel.consume(queue.queue, (msg) => {
     if (!msg || msg === null) {
-      return new AppError("Message is null");
+      logger.error("Received null message in RabbitMQ consumer");
+      return;
     }
-    const content = JSON.parse(msg.content.toString());
-    callback(content);
-    channel.ack(msg);
+    try {
+      const content = JSON.parse(msg.content.toString());
+      callback(content);
+      channel.ack(msg);
 
-    logger.info(`Consumed event from ${routingKey}:${content}`);
+      logger.info(`Consumed event from ${routingKey}`);
+    } catch (error) {
+      logger.error(`Failed to process message from ${routingKey}:`, error);
+      channel.nack(msg, false, false);
+    }
   });
 }
