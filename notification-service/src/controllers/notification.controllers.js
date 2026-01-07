@@ -18,15 +18,32 @@ export const getNotifications = catchAsync(async (req, res, next) => {
   }
 
   const cacheKey = `notifications-for-user-${userId}`;
-  const cachedNotifications = await redisClient.get(cacheKey);
+  const cachedNotifications = await req.redisClient.get(cacheKey);
 
   if (cachedNotifications) {
-    return sendSuccess(
-      res,
-      JSON.parse(cachedNotifications),
-      "Notifications retrieved successfully",
-      200,
-    );
+    try {
+      const parsedCache = JSON.parse(cachedNotifications);
+
+      if (parsedCache && parsedCache.notifications) {
+        logger.info("DEBUG: Cached notifications", { parsedCache });
+
+        return sendSuccess(
+          res,
+          parsedCache,
+          "Notifications retrieved successfully",
+          200,
+        );
+      } else {
+        console.log("DEBUG: Invalid cache structure, clearing and refetching");
+        await req.redisClient.unlink(cacheKey);
+      }
+    } catch (parseError) {
+      console.log(
+        "DEBUG: Cache parse error, clearing and refetching",
+        parseError,
+      );
+      await req.redisClient.unlink(cacheKey);
+    }
   }
 
   const notifications = await Notification.aggregate([
@@ -92,11 +109,21 @@ export const getNotifications = catchAsync(async (req, res, next) => {
 
   logger.info("DEBUG: notifications", { notifications });
 
-  await req.redisClient.set(cacheKey, JSON.stringify(notifications), "EX", 900);
+  const enrichedNotifications = {
+    notificationCount: notifications.length,
+    notifications,
+  };
+
+  await req.redisClient.set(
+    cacheKey,
+    JSON.stringify(enrichedNotifications),
+    "EX",
+    900,
+  );
 
   return sendSuccess(
     res,
-    { notificationCount: notifications.length, notifications },
+    enrichedNotifications,
     "Notifications retrieved successfully",
     200,
   );
