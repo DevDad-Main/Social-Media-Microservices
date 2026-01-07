@@ -34,6 +34,8 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS.split(",");
 //#endregion
 
 //#region Middleware
+//NOTE: Trust private/internal proxies (10.x.x.x)
+app.set("trust proxy", (ip) => ip.startsWith("10."));
 app.use(helmet());
 //#region CORS Configuration
 app.use(
