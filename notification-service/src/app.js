@@ -19,7 +19,7 @@ const rateLimiter = new RateLimiterRedis({
 });
 const expressEndpointRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 200, // limit each IP to 100 requests per windowMs - Increase this as we will fetch more data when user navigates the FE tabs -> Potentially add sockets if it's needed
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
   handler: (req, res, _next) => {
@@ -30,12 +30,29 @@ const expressEndpointRateLimiter = rateLimit({
     sendCommand: (...args) => redisClient.call(...args),
   }),
 });
+const allowedOrigins = process.env.ALLOWED_ORIGINS.split(",");
 //#endregion
 
 //#region Middleware
 app.use(helmet());
-//TODO: Add CORS custom configuration
-app.use(cors());
+//#region CORS Configuration
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Requested-With",
+      "device-remember-token",
+      "Access-Control-Allow-Origin",
+      "Origin",
+      "Accept",
+    ],
+  }),
+);
+//#endregion
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());

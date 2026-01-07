@@ -85,9 +85,7 @@ export const createPost = catchAsync(async (req, res, next) => {
   }
 
   try {
-    await Promise.all([
-      clearRedisPostsCache(req),
-    ]);
+    await Promise.all([clearRedisPostsCache(req)]);
   } catch (error) {
     logger.error(error?.message || "Failed to clear cache", { error });
     return sendError(res, error?.message || "Failed to clear cache", 500);
@@ -162,16 +160,16 @@ export const getPostById = catchAsync(async (req, res, next) => {
     }
 
     const cacheKey = `post:${postId}`;
-    // const cachedPost = await req.redisClient.get(cacheKey);
-    //
-    // if (cachedPost) {
-    //   return sendSuccess(
-    //     res,
-    //     JSON.parse(cachedPost),
-    //     "Posts retrieved successfully (cached)",
-    //     200,
-    //   );
-    // }
+    const cachedPost = await req.redisClient.get(cacheKey);
+
+    if (cachedPost) {
+      return sendSuccess(
+        res,
+        JSON.parse(cachedPost),
+        "Posts retrieved successfully (cached)",
+        200,
+      );
+    }
 
     const post = await getPostWithAggregation(postId);
 

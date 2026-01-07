@@ -64,7 +64,7 @@ export const addStory = catchAsync(async (req, res, next) => {
   };
 
   //TODO: Later add our inngest functions to delete stories in 24 hours. -> Even better check if RabbitMQ can handle this
-  await clearRedisStoriesCache(req);
+  await clearRedisStoriesCache(req, userId);
 
   return sendSuccess(res, enrichedStory, "Story created successfully", 201);
 });
@@ -80,17 +80,17 @@ export const getStories = catchAsync(async (req, res, next) => {
       return sendError(res, "User Not Authenticated", 401);
     }
 
-    const cacheKey = `stories`;
-    // const cachedPosts = await req.redisClient.get(cacheKey);
-    //
-    // if (cachedPosts) {
-    //   return sendSuccess(
-    //     res,
-    //     JSON.parse(cachedPosts),
-    //     "Stories retrieved successfully (cached)",
-    //     200,
-    //   );
-    // }
+    const cacheKey = `stories:${userId}`;
+    const cachedPosts = await req.redisClient.get(cacheKey);
+
+    if (cachedPosts) {
+      return sendSuccess(
+        res,
+        JSON.parse(cachedPosts),
+        "Stories retrieved successfully (cached)",
+        200,
+      );
+    }
 
     // Fetch current user's full data from user service to get connections and following
     const currentUser = await getUserByIdFromUserService(userId);
@@ -153,7 +153,7 @@ export const deleteStory = catchAsync(async (req, res, next) => {
       return sendError(res, "Story Not Deleted", 404);
     }
 
-    await clearRedisStoriesCache(req);
+    await clearRedisStoriesCache(req, userId);
 
     return sendSuccess(res, {}, "Story deleted successfully", 200);
   } catch (error) {

@@ -6,6 +6,7 @@ import {
 } from "devdad-express-utils";
 import { Notification } from "../models/Notification.model.js";
 import mongoose, { isValidObjectId } from "mongoose";
+import { clearRedisNotificationsCache } from "../utils/clearNotificationsCache.utils.js";
 
 //#region Get All Notifications For A User
 export const getNotifications = catchAsync(async (req, res, next) => {
@@ -14,6 +15,18 @@ export const getNotifications = catchAsync(async (req, res, next) => {
   if (!isValidObjectId(userId)) {
     logger.warn(`Invalid User ID: ${userId}`);
     return sendError(res, "Invalid User ID", 400);
+  }
+
+  const cacheKey = `notifications-for-user-${userId}`;
+  const cachedNotifications = await redisClient.get(cacheKey);
+
+  if (cachedNotifications) {
+    return sendSuccess(
+      res,
+      JSON.parse(cachedNotifications),
+      "Notifications retrieved successfully",
+      200,
+    );
   }
 
   const notifications = await Notification.aggregate([
@@ -79,6 +92,8 @@ export const getNotifications = catchAsync(async (req, res, next) => {
 
   logger.info("DEBUG: notifications", { notifications });
 
+  await req.redisClient.set(cacheKey, JSON.stringify(notifications), "EX", 900);
+
   return sendSuccess(
     res,
     { notificationCount: notifications.length, notifications },
@@ -113,6 +128,8 @@ export const markNotificationAsRead = catchAsync(async (req, res, next) => {
     );
   }
 
+  await clearRedisNotificationsCache(req, req.user?._id);
+
   return sendSuccess(res, {}, "Notification marked as read successfully", 200);
 });
 //#endregion
@@ -140,6 +157,8 @@ export const deleteNotification = catchAsync(async (req, res, next) => {
     );
   }
 
+  await clearRedisNotificationsCache(req, req.user?._id);
+
   return sendSuccess(res, {}, "Notification deleted successfully", 200);
 });
 //#endregion
@@ -154,6 +173,8 @@ export const clearAllNotifications = catchAsync(async (req, res, next) => {
   }
 
   await Notification.deleteMany({ user: loggedInUserId });
+
+  await clearRedisNotificationsCache(req, loggedInUserId);
 
   return sendSuccess(res, {}, "All notifications cleared successfully", 200);
 });
