@@ -18,6 +18,10 @@ import {
 } from "../utils/postServiceAxiosRequests.utils.js";
 import { fetchPostCommentsFromCommentService } from "../utils/fetchPostCommentsFromCommentService.js";
 import { fetchUserProfilesFromUserService } from "../utils/fetchUserProfilesFromUserService.js";
+import {
+  runInTransaction,
+  executeWithRetry,
+} from "../lib/mongodb-session.lib.js";
 import { getPostWithAggregation } from "../utils/getPostWithAggregation.utils.js";
 import { getPostsWithAggregation } from "../utils/getPostsWithAggregation.utils.js";
 
@@ -44,44 +48,76 @@ export const createPost = catchAsync(async (req, res, next) => {
     return sendError(res, "User is not valid", 400);
   }
 
-  const newelyCreatedPost = await Post.create({
-    user: req.user._id,
-    content,
-    postType,
-  });
-
-  if (!newelyCreatedPost) {
-    logger.warn(`Failed to create post`);
-    return sendError(res, "Failed to create post", 500);
-  }
-
-  await publishRabbitMQEvent("post.created", {
-    postId: newelyCreatedPost._id.toString(),
-    userId: req.user._id.toString(),
-    searchTerm: newelyCreatedPost.content,
-    postCreatedAt: newelyCreatedPost.createdAt,
-  });
-
+  let newelyCreatedPost;
   let postMediaURLs = [];
-  console.log("DEBUG: About to check if condition - images.length =", {
-    imagesLength: images?.length,
-    images,
-  });
-  if (images && images.length > 0) {
-    try {
-      console.log("INSIDE IF BLOCK: Processing images");
-      const mediaResults = await postMediaFilesToMediaServiceForProcessing(
-        newelyCreatedPost._id.toString(),
-        images,
-      );
 
-      logger.info("MEDIA RESULTS: ", mediaResults);
+  try {
+    // Create post first
+    newelyCreatedPost = await Post.create({
+      user: req.user._id,
+      content,
+      postType,
+    });
 
-      postMediaURLs = mediaResults.data.media.urls;
-    } catch (error) {
-      logger.error("Failed to process images", { error });
-      return sendError(res, error?.message || "Failed to process images", 500);
+    if (!newelyCreatedPost) {
+      logger.warn(`Failed to create post`);
+      return sendError(res, "Failed to create post", 500);
     }
+
+    // Handle media processing if images are provided
+    if (images && images.length > 0) {
+      console.log("DEBUG: About to process images - images.length =", {
+        imagesLength: images?.length,
+        images,
+      });
+
+      try {
+        console.log("INSIDE IF BLOCK: Processing images");
+        const mediaResults = await postMediaFilesToMediaServiceForProcessing(
+          newelyCreatedPost._id.toString(),
+          images,
+        );
+
+        logger.info("MEDIA RESULTS: ", mediaResults);
+        postMediaURLs = mediaResults.data.media.urls;
+      } catch (mediaError) {
+        logger.error("Failed to process images, rolling back post creation", {
+          error: mediaError,
+        });
+
+        // Compensating transaction: delete the post if media processing fails
+        await Post.findByIdAndDelete(newelyCreatedPost._id);
+
+        return sendError(
+          res,
+          mediaError?.message || "Failed to process images",
+          500,
+        );
+      }
+    }
+
+    // Only publish event after all operations succeed
+    await publishRabbitMQEvent("post.created", {
+      postId: newelyCreatedPost._id.toString(),
+      userId: req.user._id.toString(),
+      searchTerm: newelyCreatedPost.content,
+      postCreatedAt: newelyCreatedPost.createdAt,
+    });
+  } catch (error) {
+    logger.error("Failed to create post", { error });
+
+    // If post was created but something else failed, clean it up
+    if (newelyCreatedPost) {
+      try {
+        await Post.findByIdAndDelete(newelyCreatedPost._id);
+      } catch (cleanupError) {
+        logger.error("Failed to cleanup post after error", {
+          error: cleanupError,
+        });
+      }
+    }
+
+    return sendError(res, error?.message || "Failed to create post", 500);
   }
 
   try {
@@ -343,29 +379,31 @@ export const togglePostLike = catchAsync(async (req, res, next) => {
     return sendError(res, "Invalid User ID", 400, { success: false });
   }
 
-  const updatedPost = await Post.findByIdAndUpdate(
-    postId,
-    [
-      {
-        $set: {
-          likesCount: {
-            $cond: {
-              if: { $in: [loggedInUserId, "$likesCount"] },
-              then: {
-                $filter: {
-                  input: "$likesCount",
-                  cond: { $ne: ["$$this", loggedInUserId] },
+  const updatedPost = await executeWithRetry(async () => {
+    return await Post.findByIdAndUpdate(
+      postId,
+      [
+        {
+          $set: {
+            likesCount: {
+              $cond: {
+                if: { $in: [loggedInUserId, "$likesCount"] },
+                then: {
+                  $filter: {
+                    input: "$likesCount",
+                    cond: { $ne: ["$$this", loggedInUserId] },
+                  },
                 },
+                else: { $concatArrays: ["$likesCount", [loggedInUserId]] },
               },
-              else: { $concatArrays: ["$likesCount", [loggedInUserId]] },
             },
           },
         },
-      },
-    ],
-    // NOTE: We need to set updatePipeline to true as we are trying to use an array aggreagate
-    { new: true, runValidators: true, updatePipeline: true },
-  );
+      ],
+      // NOTE: We need to set updatePipeline to true as we are trying to use an array aggreagate
+      { new: true, runValidators: true, updatePipeline: true },
+    );
+  });
 
   if (!updatedPost) {
     logger.warn(`Post Not Found: ${postId}`);

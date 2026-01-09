@@ -18,6 +18,7 @@ import {
 } from "../utils/cleanRedisCache.utils.js";
 import { publishEvent as publishRabbitMQEvent } from "../utils/rabbitmq.utils.js";
 import { Connection } from "../models/Connection.model.js";
+import { runInTransaction } from "../lib/mongodb-session.lib.js";
 import { sendUserMediaToMediaService } from "../utils/sendUserMediaToMediaService.utils.js";
 import { getUsersSearchAggregation } from "../utils/getUsersSearchAggregation.utils.js";
 import { getUserConnectionsAggregation } from "../utils/getUserConnectionsAggregation.utils.js";
@@ -852,18 +853,32 @@ export const acceptConnectionRequests = catchAsync(async (req, res, next) => {
       return sendError(res, "Connection Not Found", 404);
     }
 
-    // add to logged in user "connections" (no duplicates thanks to $addToSet)
-    await User.findByIdAndUpdate(userId, {
-      $addToSet: { connections: id },
-    });
+    await runInTransaction(async (session) => {
+      // add to logged in user "connections" (no duplicates thanks to $addToSet)
+      await User.findByIdAndUpdate(
+        userId,
+        {
+          $addToSet: { connections: id },
+        },
+        { session },
+      );
 
-    // add to "other users connections"
-    await User.findByIdAndUpdate(id, {
-      $addToSet: { connections: userId },
-    });
+      // add to "other users connections"
+      await User.findByIdAndUpdate(
+        id,
+        {
+          $addToSet: { connections: userId },
+        },
+        { session },
+      );
 
-    await Connection.findByIdAndUpdate(connection._id, {
-      $set: { status: "accepted" },
+      await Connection.findByIdAndUpdate(
+        connection._id,
+        {
+          $set: { status: "accepted" },
+        },
+        { session },
+      );
     });
 
     // Clear connections cache for both users
@@ -871,6 +886,8 @@ export const acceptConnectionRequests = catchAsync(async (req, res, next) => {
       userId.toString(),
       id.toString(),
     ]);
+
+    return sendSuccess(res, {}, "Connection Accepted", 200);
   } catch (error) {
     logger.error("Failed to accept connection", { error });
     return sendError(res, error.message, error.status || 500, { error });
@@ -1065,14 +1082,24 @@ export const followUser = async (req, res) => {
       return sendError(res, "Cannot follow yourself", 400);
     }
 
-    // add to "following" (no duplicates thanks to $addToSet)
-    await User.findByIdAndUpdate(userId, {
-      $addToSet: { following: id },
-    });
+    await runInTransaction(async (session) => {
+      // add to "following" (no duplicates thanks to $addToSet)
+      await User.findByIdAndUpdate(
+        userId,
+        {
+          $addToSet: { following: id },
+        },
+        { session },
+      );
 
-    // add to "followers"
-    await User.findByIdAndUpdate(id, {
-      $addToSet: { followers: userId },
+      // add to "followers"
+      await User.findByIdAndUpdate(
+        id,
+        {
+          $addToSet: { followers: userId },
+        },
+        { session },
+      );
     });
 
     // Clear connections cache for both users
@@ -1098,14 +1125,24 @@ export const unfollowUser = async (req, res) => {
     if (!isValidObjectId(userId)) return sendError(res, "Invalid user ID", 400);
     if (!isValidObjectId(id)) return sendError(res, "Invalid user ID", 400);
 
-    // Remove unfollowed user from your following
-    await User.findByIdAndUpdate(userId, {
-      $pull: { following: id },
-    });
+    await runInTransaction(async (session) => {
+      // Remove unfollowed user from your following
+      await User.findByIdAndUpdate(
+        userId,
+        {
+          $pull: { following: id },
+        },
+        { session },
+      );
 
-    // Remove you from their followers
-    await User.findByIdAndUpdate(id, {
-      $pull: { followers: userId },
+      // Remove you from their followers
+      await User.findByIdAndUpdate(
+        id,
+        {
+          $pull: { followers: userId },
+        },
+        { session },
+      );
     });
 
     try {

@@ -14,6 +14,7 @@ import {
   clearRedisPostsCache,
 } from "../utils/cleanRedisCache.utils.js";
 import { publishEvent as publishRabbitMQEvent } from "../utils/rabbitmq.utils.js";
+import { runInTransaction } from "../lib/mongodb-session.lib.js";
 
 //#region Add Comment
 export const addComment = catchAsync(async (req, res, next) => {
@@ -131,33 +132,31 @@ export const replyToComment = catchAsync(async (req, res, next) => {
       return sendError(res, "Post not found", 404);
     }
 
-    const newComment = await Comment.create({
-      content,
-      post: postResponse.data.postId,
-      owner: req.user._id,
-      parent: parentId,
+    let newComment;
+    let recipientsComment;
+
+    await runInTransaction(async (session) => {
+      newComment = await Comment.create([{
+        content,
+        post: postResponse.data.postId,
+        owner: req.user._id,
+        parent: parentId,
+      }], { session });
+
+      if (!newComment || newComment.length === 0) {
+        throw new Error("Failed to create comment");
+      }
+
+      newComment = newComment[0];
+
+      recipientsComment = await Comment.findByIdAndUpdate(parentId, {
+        $addToSet: { replies: newComment._id },
+      }, { session, new: true });
+
+      if (!recipientsComment) {
+        throw new Error("Failed to add comment to parent comment || Parent comment not found");
+      }
     });
-
-    if (!newComment) {
-      logger.error("Failed to create comment");
-      return sendError(res, "Failed to create comment", 500);
-    }
-
-    const recipientsComment = await Comment.findByIdAndUpdate(parentId, {
-      $addToSet: { replies: newComment._id },
-    });
-
-    if (!recipientsComment) {
-      logger.error(
-        "Failed to add comment to parent comment  || Parent comment not found",
-        { parentId },
-      );
-      return sendError(
-        res,
-        "Failed to add comment to parent comment  || Parent comment not found",
-        500,
-      );
-    }
 
     const userResponse = await fetchUserFromUserServiceById(
       newComment.owner.toString(),
@@ -380,27 +379,24 @@ export const deleteComment = catchAsync(async (req, res, next) => {
     return sendError(res, "Invalid MongoDB ObjectId", 400);
   }
 
-  const commentToDelete = await Comment.findByIdAndDelete(commentId);
+  let commentToDelete;
+  let childrenComments;
 
-  if (!commentToDelete) {
-    logger.error("Failed to delete comment || Comment Not Found");
-    return sendError(res, "Failed to delete comment || Comment Not Found", 500);
-  }
+  await runInTransaction(async (session) => {
+    commentToDelete = await Comment.findByIdAndDelete(commentId, { session });
 
-  const childrenComments = await Comment.deleteMany({
-    parent: commentToDelete,
+    if (!commentToDelete) {
+      throw new Error("Failed to delete comment || Comment Not Found");
+    }
+
+    childrenComments = await Comment.deleteMany({
+      parent: commentToDelete,
+    }, { session });
+
+    if (childrenComments.deletedCount === 0) {
+      throw new Error("Failed to delete children comments || No children comments found");
+    }
   });
-
-  if (childrenComments.deletedCount === 0) {
-    logger.error(
-      "Failed to delete children comments || No children comments found",
-    );
-    return sendError(
-      res,
-      "Failed to delete children comments || No children comments found",
-      500,
-    );
-  }
 
   try {
     await Promise.all([

@@ -13,6 +13,7 @@ import { postMediaFileToMediaServiceForProcessing } from "../utils/postMediaFile
 import { getUserByIdFromUserService } from "../utils/userServiceRequests.utils.js";
 import mongoose from "mongoose";
 import { getStoriesAggregationPipeline } from "../utils/storiesAggregation.utils.js";
+import { runInTransaction } from "../lib/mongodb-session.lib.js";
 
 //#region Add New Story
 export const addStory = catchAsync(async (req, res, next) => {
@@ -31,31 +32,55 @@ export const addStory = catchAsync(async (req, res, next) => {
 
   const media = req.file;
 
-  const story = await Story.create({
-    user: userId,
-    content,
-    mediaType: media_type,
-    backgroundColour: background_color,
-  });
-
+  let story;
   let mediaURL = "";
-  if (media_type === "image" || media_type === "video") {
-    try {
-      const mediaUploadResult = await postMediaFileToMediaServiceForProcessing(
-        story._id.toString(),
-        media,
-        userId,
-      );
-      console.log("DEBUG: mediaUploadResult = ", mediaUploadResult);
-      mediaURL = mediaUploadResult.data.media.url;
-    } catch (error) {
-      logger.error(`Failed to process ${media_type}`, { error });
-      return sendError(
-        res,
-        error?.message || `Failed to process ${media_type}`,
-        500,
-      );
+
+  try {
+    // Create story first
+    story = await Story.create({
+      user: userId,
+      content,
+      mediaType: media_type,
+      backgroundColour: background_color,
+    });
+
+    // Handle media processing if needed
+    if (media_type === "image" || media_type === "video") {
+      try {
+        const mediaUploadResult = await postMediaFileToMediaServiceForProcessing(
+          story._id.toString(),
+          media,
+          userId,
+        );
+        console.log("DEBUG: mediaUploadResult = ", mediaUploadResult);
+        mediaURL = mediaUploadResult.data.media.url;
+      } catch (mediaError) {
+        logger.error(`Failed to process ${media_type}, rolling back story creation`, { error: mediaError });
+        
+        // Compensating transaction: delete the story if media processing fails
+        await Story.findByIdAndDelete(story._id);
+        
+        return sendError(
+          res,
+          mediaError?.message || `Failed to process ${media_type}`,
+          500,
+        );
+      }
     }
+
+  } catch (error) {
+    logger.error("Failed to create story", { error });
+    
+    // If story was created but something else failed, clean it up
+    if (story) {
+      try {
+        await Story.findByIdAndDelete(story._id);
+      } catch (cleanupError) {
+        logger.error("Failed to cleanup story after error", { error: cleanupError });
+      }
+    }
+    
+    return sendError(res, error?.message || "Failed to create story", 500);
   }
 
   const enrichedStory = {
