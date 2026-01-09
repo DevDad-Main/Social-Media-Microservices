@@ -1108,11 +1108,19 @@ export const unfollowUser = async (req, res) => {
       $pull: { followers: userId },
     });
 
-    // Clear connections cache for both users
-    await clearRedisConnectionsCacheForMultipleUsers(req, [
-      userId.toString(),
-      id.toString(),
-    ]);
+    try {
+      // Clear connections cache for both users
+      await Promise.all([
+        await clearRedisUserCache(req, userId.toString()),
+        await clearRedisConnectionsCacheForMultipleUsers(req, [
+          userId.toString(),
+          id.toString(),
+        ]),
+      ]);
+    } catch (error) {
+      logger.error("Failed to clear users cache", { error });
+      return sendError(res, error.message, error.status || 500, { error });
+    }
 
     return sendSuccess(res, {}, "User Successfully Unfollowed", 200);
   } catch (error) {
