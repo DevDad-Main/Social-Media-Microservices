@@ -140,11 +140,29 @@ export const createPost = catchAsync(async (req, res, next) => {
 export const getPosts = catchAsync(async (req, res, next) => {
   const limit = parseInt(req.query.limit) || 10;
   const cursor = req.query.cursor; // createdAt of last post
+  const userId = req.user._id;
 
-  const matchStage = cursor ? { createdAt: { $lt: new Date(cursor) } } : {};
+  // Fetch current user's following list
+  const currentUser = await fetchUserProfilesFromUserService([
+    userId.toString(),
+  ]);
 
-  // Use a more specific cache key to avoid collisions
-  const cacheKey = `posts:cursor:${cursor || "first"}:${limit}`;
+  const followingList = currentUser?.data?.[0]?.following || [];
+
+  // Include user's own posts and posts from users they follow
+  const allowedUserIds = [userId, ...followingList];
+
+  const matchStage = cursor
+    ? {
+        createdAt: { $lt: new Date(cursor) },
+        user: { $in: allowedUserIds },
+      }
+    : {
+        user: { $in: allowedUserIds },
+      };
+
+  // Use user-specific cache key to avoid sharing cache between users
+  const cacheKey = `posts:user:${userId}:cursor:${cursor || "first"}:${limit}`;
   const cachedPosts = await req.redisClient.get(cacheKey);
 
   if (cachedPosts) {
